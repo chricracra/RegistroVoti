@@ -119,14 +119,16 @@ def calculate_overall_average(user):
     total_weight = sum(weights)
     return round(total / total_weight, 2)
 
-# Creazione tabelle al primo avvio
-@app.before_first_request
+@app.before_request
 def create_tables():
-    try:
-        db.create_all()
-        print("Tabelle create con successo!")
-    except Exception as e:
-        print(f"Errore nella creazione delle tabelle: {str(e)}")
+    if not hasattr(app, 'tables_created'):
+        try:
+            with app.app_context():
+                db.create_all()
+                print("Tabelle create con successo!")
+            app.tables_created = True
+        except Exception as e:
+            print(f"Errore nella creazione delle tabelle: {str(e)}")
 
 # Routes
 @app.route('/register', methods=['GET', 'POST'])
