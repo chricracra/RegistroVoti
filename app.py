@@ -51,6 +51,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
+    theme_preference = db.Column(db.String(10), default='light')  # Aggiungi questo campo
 
 class Subject(db.Model):
     __tablename__ = 'subjects'
