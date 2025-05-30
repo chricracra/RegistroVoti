@@ -1,120 +1,233 @@
-{% extends "base.html" %}
-{% block content %}
-<div class="subject-page container">
-    <div class="subject-title">
-        <h1>{{ subject.name }}</h1>
-        <div style="font-size: 2rem; font-weight: bold; color: var(--primary);">
-            {{ subject.avg }}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ subject.name }} - Registro Voti</title>
+    <style>
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        body { max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f5f5f7; color: #333; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .back-link { color: #2575fc; text-decoration: none; display: flex; align-items: center; gap: 5px; }
+        .subject-header { background: white; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .subject-title { margin: 0; color: #2c3e50; }
+        .subject-avg { font-size: 1.8em; font-weight: 700; color: #ff6b6b; }
+        
+        /* Grafico */
+        .chart-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 300px;
+            margin-bottom: 30px;
+        }
+        
+        /* Lista voti */
+        .grade-list-container {
+            margin-top: 30px;
+        }
+        .card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .grade-item {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 15px;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            align-items: center;
+        }
+        .grade-info {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 10px;
+            align-items: center;
+        }
+        .grade-value {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #ff6b6b;
+            min-width: 60px;
+            text-align: center;
+        }
+        .grade-details {
+            display: flex;
+            flex-direction: column;
+        }
+        .grade-weight {
+            background: #eef7ff;
+            color: #2575fc;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.9em;
+            align-self: flex-start;
+        }
+        .grade-date {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+        .delete-btn { 
+            background: #ff6b6b; 
+            color: white; 
+            border: none; 
+            border-radius: 6px; 
+            padding: 8px 15px; 
+            cursor: pointer; 
+            font-size: 14px;
+        }
+        .add-grade-form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; margin-top: 20px; }
+        input, button { padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
+        button { background: #2575fc; color: white; border: none; cursor: pointer; font-weight: 500; }
+        .delete-subject-btn { background: #ff6b6b; width: 100%; margin-top: 20px; }
+        
+        @media (max-width: 600px) {
+            .add-grade-form { grid-template-columns: 1fr; }
+            .grade-item { grid-template-columns: 1fr; }
+            .chart-container { height: 250px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="{{ url_for('dashboard') }}" class="back-link">← Torna alla dashboard</a>
+    </div>
+    
+    <div class="subject-header">
+        <h1 class="subject-title">{{ subject.name }}</h1>
+        <div class="subject-avg">Media: {{ average }}</div>
+    </div>
+    
+    <!-- Grafico andamento voti -->
+    <div class="card">
+        <h2>📈 Andamento Voti</h2>
+        <div class="chart-container">
+            <canvas id="trendChart"></canvas>
         </div>
     </div>
     
-    <!-- Grafico Andamento Voti -->
-    <div class="chart-container">
-        <canvas id="trendChart"></canvas>
-    </div>
-    
-    <!-- Aggiungi Voto -->
-    <div class="subject-card">
-        <form action="{{ url_for('add_grade') }}" method="POST">
-            <!-- Campo nascosto per CSRF token -->
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="subject_id" value="{{ subject.id }}">
-            
-            <div class="add-grade-form">
-                <input type="number" step="0.1" min="0" max="10" name="value" placeholder="Voto" required>
-                <input type="number" step="0.1" min="0.1" name="weight" placeholder="Peso" value="1.0" required>
-                <button type="submit">Aggiungi Voto</button>
+    <!-- Lista voti -->
+    <div class="card grade-list-container">
+        <h2>Voti registrati</h2>
+        
+        {% if grades %}
+            {% for grade in grades %}
+            <div class="grade-item">
+                <div class="grade-info">
+                    <div class="grade-value">{{ grade.value }}</div>
+                    <div class="grade-details">
+                        <span class="grade-weight">Peso: {{ grade.weight }}</span>
+                        <span class="grade-date">{{ grade.date.strftime('%d/%m/%Y') }}</span>
+                    </div>
+                </div>
+                <form method="POST" action="{{ url_for('delete_grade', grade_id=grade.id) }}">
+                    <button type="submit" class="delete-btn">Elimina</button>
+                </form>
             </div>
+            {% endfor %}
+        {% else %}
+            <p>Nessun voto registrato per questa materia</p>
+        {% endif %}
+        
+        <form class="add-grade-form" method="POST" action="{{ url_for('add_grade', subject_id=subject.id) }}">
+            <input type="number" name="value" min="1" max="10" step="0.1" placeholder="Voto (1-10)" required>
+            <input type="number" name="weight" min="1" max="10" value="1" placeholder="Peso" required>
+            <button type="submit">Aggiungi Voto</button>
         </form>
     </div>
     
-    <!-- Lista Voti -->
-    <div class="subject-card">
-        <h2 style="margin-bottom: 1rem;">Voti Registrati</h2>
-        <div class="grades-list">
-            {% for grade in subject.grades|sort(attribute='date', reverse=true) %}
-            <div class="grade-item">
-                <span class="grade-value">{{ grade.value }} (x{{ grade.weight }})</span>
-                <div>
-                    <span class="grade-date">{{ grade.date.strftime('%d/%m/%Y') }}</span>
-                    <a href="{{ url_for('delete_grade', grade_id=grade.id) }}" class="delete-btn">
-                        <i class="fas fa-trash"></i>
-                    </a>
-                </div>
-            </div>
-            {% else %}
-            <p style="text-align: center; padding: 1rem;">Nessun voto registrato per questa materia</p>
-            {% endfor %}
-        </div>
-    </div>
-</div>
+    <form method="POST" action="{{ url_for('delete_subject', subject_id=subject.id) }}">
+        <button type="submit" class="delete-subject-btn">Elimina Materia</button>
+    </form>
 
-<script>
-    // Preparazione dati per il grafico
-    const grades = {{ subject.grades|sort(attribute='date')|map(attribute='value')|tojson }};
-    const dates = {{ subject.grades|sort(attribute='date')|map(attribute='date')|map('date')|map('strftime', '%d/%m')|tojson }};
-    
-    // Configurazione Grafico Andamento
-    const trendCtx = document.getElementById('trendChart').getContext('2d');
-    new Chart(trendCtx, {
-        type: 'line',
-        data: {
-            labels: dates,
-            datasets: [{
-                label: 'Andamento Voti',
-                data: grades,
-                borderColor: '#2575fc',
-                backgroundColor: 'rgba(37, 117, 252, 0.1)',
-                borderWidth: 3,
-                tension: 0.3,
-                fill: true,
-                pointBackgroundColor: '#2575fc',
-                pointBorderColor: '#fff',
-                pointRadius: 5,
-                pointHoverRadius: 7
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    min: 0,
-                    max: 10,
-                    grid: {
-                        color: 'var(--border-color)'
-                    },
-                    ticks: {
-                        color: 'var(--text-color)'
-                    }
-                },
-                x: {
-                    grid: {
-                        display: false
-                    },
-                    ticks: {
-                        color: 'var(--text-color)'
-                    }
-                }
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Grafico di andamento
+        const trendCtx = document.getElementById('trendChart').getContext('2d');
+        const trendChart = new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: JSON.parse('{{ chart_dates | safe }}'),
+                datasets: [{
+                    label: 'Voto',
+                    data: JSON.parse('{{ chart_values | safe }}'),
+                    fill: false,
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1,
+                    pointBackgroundColor: 'rgb(75, 192, 192)',
+                    pointRadius: 6,
+                    pointHoverRadius: 8
+                }]
             },
-            plugins: {
-                legend: {
-                    labels: {
-                        color: 'var(--text-color)',
-                        font: {
-                            size: 14
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        min: 0,
+                        max: 10,
+                        ticks: {
+                            stepSize: 1,
+                            font: {
+                                size: 12
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Voto',
+                            font: {
+                                size: 14,
+                                weight: 'bold'
+                            }
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            font: {
+                                size: 12
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Data',
+                            font: {
+                                size: 14,
+                                weight: 'bold'
+                            }
                         }
                     }
                 },
-                tooltip: {
-                    backgroundColor: 'var(--card-bg)',
-                    titleColor: 'var(--text-color)',
-                    bodyColor: 'var(--text-color)',
-                    borderColor: 'var(--border-color)',
-                    borderWidth: 1
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            font: {
+                                size: 14
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function(context) {
+                                return `Data: ${context[0].label}`;
+                            },
+                            label: function(context) {
+                                return `Voto: ${context.parsed.y}`;
+                            }
+                        }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                layout: {
+                    padding: {
+                        top: 20,
+                        right: 20,
+                        bottom: 20,
+                        left: 20
+                    }
                 }
             }
-        }
-    });
-</script>
-{% endblock %}
+        });
+    </script>
+</body>
+</html>
