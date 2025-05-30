@@ -6,7 +6,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import os
 from datetime import datetime
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-secret-key')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL').replace("postgres://", "postgresql://", 1)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -14,6 +14,8 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
+login_manager.login_message = "Effettua l'accesso per accedere a questa pagina"
+login_manager.login_message_category = "info"
 csrf = CSRFProtect(app)
 
 # Modelli
@@ -71,16 +73,15 @@ def login():
         return redirect(url_for('dashboard'))
     
     if request.method == 'POST':
-        username = request.form['username']  # Cambiato da email a username
+        username = request.form['username']
         password = request.form['password']
-        user = User.query.filter_by(username=username).first()  # Cerca per username
+        user = User.query.filter_by(username=username).first()
         
         if user and check_password_hash(user.password, password):
             login_user(user)
             return redirect(url_for('dashboard'))
         flash('Username o password non validi', 'danger')
     return render_template('login.html')
-
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -102,7 +103,7 @@ def register():
         db.session.commit()
         flash('Registrazione completata! Effettua il login', 'success')
         return redirect(url_for('login'))
-    return render_template('register.html')  # CORRETTO: rimosso il parentesi extra
+    return render_template('register.html')
 
 @app.route('/logout')
 @login_required
