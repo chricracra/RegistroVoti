@@ -64,30 +64,34 @@ app.permanent_session_lifetime = timedelta(days=30)
 
 db = SQLAlchemy(app)
 
-# Modelli
+# Modelli con nomi di tabella espliciti
 class User(db.Model):
+    __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
-    subjects = db.relationship('Subject', backref='user', lazy=True)
+    subjects = db.relationship('Subject', backref='user', lazy=True, cascade='all, delete-orphan')
 
 class Subject(db.Model):
+    __tablename__ = 'subjects'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    grades = db.relationship('Grade', backref='subject', lazy=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    grades = db.relationship('Grade', backref='subject', lazy=True, cascade='all, delete-orphan')
     
     def completion(self):
         if not self.grades:
             return 0
-        return min(100, len(self.grades) * 10)  # 10% per ogni voto, max 100%
+        return min(100, len(self.grades) * 10)
 
 class Grade(db.Model):
+    __tablename__ = 'grades'
     id = db.Column(db.Integer, primary_key=True)
     value = db.Column(db.Float, nullable=False)
     weight = db.Column(db.Float, nullable=False, default=1.0)
     date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey('subjects.id', ondelete='CASCADE'), nullable=False)
+
 
 # Funzioni di calcolo
 def calculate_weighted_average(grades):
@@ -124,11 +128,19 @@ def create_tables():
     if not hasattr(app, 'tables_created'):
         try:
             with app.app_context():
+                # Crea tutte le tabelle in ordine corretto
                 db.create_all()
-                print("Tabelle create con successo!")
-            app.tables_created = True
+                
+                # Verifica che le tabelle esistano
+                inspector = inspect(db.engine)
+                table_names = inspector.get_table_names()
+                print(f"Tabelle create: {table_names}")
+                
+                app.tables_created = True
         except Exception as e:
             print(f"Errore nella creazione delle tabelle: {str(e)}")
+            import traceback
+            traceback.print_exc()
 
 # Routes
 @app.route('/register', methods=['GET', 'POST'])
