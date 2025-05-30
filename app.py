@@ -92,6 +92,18 @@ class Grade(db.Model):
     date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     subject_id = db.Column(db.Integer, db.ForeignKey('subjects.id', ondelete='CASCADE'), nullable=False)
 
+# Forza l'ordine di creazione delle tabelle
+def create_tables_in_order():
+    tables = [
+        User.__table__,
+        Subject.__table__,
+        Grade.__table__
+    ]
+    
+    db.metadata.create_all(db.engine, tables=tables)
+
+# Sostituisci la chiamata a db.create_all() con:
+create_tables_in_order()
 
 # Funzioni di calcolo
 def calculate_weighted_average(grades):
