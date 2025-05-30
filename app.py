@@ -64,7 +64,7 @@ app.permanent_session_lifetime = timedelta(days=30)
 
 db = SQLAlchemy(app)
 
-# Modelli con nomi di tabella espliciti
+# Modelli con nomi tabella espliciti e convenzioni PostgreSQL
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
