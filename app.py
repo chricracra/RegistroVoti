@@ -127,25 +127,37 @@ def calculate_weighted_average(grades):
     total_weight = sum(grade.weight for grade in grades)
     return round(weighted_sum / total_weight, 2) if total_weight else 0
 
+# Modifica la funzione calculate_overall_average
 def calculate_overall_average(user_id):
-    # Calcola la media generale di tutti i voti di un utente
     try:
-        # Query per ottenere tutti i voti dell'utente
-        grades = db.session.execute(text("""
-            SELECT g.value, g.weight
-            FROM grades g
-            JOIN subjects s ON g.subject_id = s.id
-            WHERE s.user_id = :user_id
-        """), {'user_id': user_id}).fetchall()
+        # Calcola la media generale come media delle medie delle materie
+        subjects = db.session.execute(
+            text("SELECT id FROM subjects WHERE user_id = :user_id"),
+            {'user_id': user_id}
+        ).fetchall()
         
-        if not grades:
+        if not subjects:
             return 0
         
-        weighted_sum = sum(grade.value * grade.weight for grade in grades)
-        total_weight = sum(grade.weight for grade in grades)
-        return round(weighted_sum / total_weight, 2) if total_weight else 0
+        total_avg = 0
+        count = 0
+        
+        for subject in subjects:
+            grades = db.session.execute(
+                text("SELECT value, weight FROM grades WHERE subject_id = :subject_id"),
+                {'subject_id': subject.id}
+            ).fetchall()
+            
+            if grades:
+                weighted_sum = sum(g.value * g.weight for g in grades)
+                total_weight = sum(g.weight for g in grades)
+                subject_avg = weighted_sum / total_weight if total_weight else 0
+                total_avg += subject_avg
+                count += 1
+        
+        return round(total_avg / count, 2) if count else 0
     except Exception as e:
-        print(f"Errore calcolo media: {str(e)}")
+        print(f"Errore calcolo media generale: {str(e)}")
         return 0
 
 # Routes
@@ -214,6 +226,7 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
+# Modifica la funzione dashboard
 @app.route('/')
 def dashboard():
     if 'user_id' not in session:
@@ -222,48 +235,37 @@ def dashboard():
     user_id = session['user_id']
     
     try:
-        # Recupera tutte le materie dell'utente
         subjects = db.session.execute(
             text("SELECT * FROM subjects WHERE user_id = :user_id"),
             {'user_id': user_id}
         ).fetchall()
         
-        # Prepara i dati per il frontend
         subjects_data = []
+        subject_avgs = []  # Per il grafico a stella
+        
         for subject in subjects:
-            # Recupera i voti per questa materia
             grades = db.session.execute(
                 text("SELECT * FROM grades WHERE subject_id = :subject_id"),
                 {'subject_id': subject.id}
             ).fetchall()
             
-            # Calcola la media della materia
             avg = calculate_weighted_average(grades) if grades else 0
-            
             subjects_data.append({
                 'id': subject.id,
                 'name': subject.name,
                 'average': avg,
-                'completion': min(100, len(grades) * 10),  # 10% per voto
                 'grade_count': len(grades)
             })
+            subject_avgs.append(avg)  # Aggiungi la media al grafico
         
-        # Calcola la media generale
         overall_avg = calculate_overall_average(user_id)
-        
-        # Prepara dati per il grafico radar
-        radar_labels = [s.name for s in subjects]
-        radar_data = [min(100, len(db.session.execute(
-            text("SELECT id FROM grades WHERE subject_id = :subject_id"),
-            {'subject_id': s.id}
-        ).fetchall()) * 10) for s in subjects]
         
         return render_template('dashboard.html',
                                subjects=subjects_data,
                                overall_avg=overall_avg,
                                username=session['username'],
-                               radar_labels=json.dumps(radar_labels),
-                               radar_data=json.dumps(radar_data))
+                               radar_labels=json.dumps([s.name for s in subjects]),
+                               radar_data=json.dumps(subject_avgs))
     
     except Exception as e:
         flash(f'Errore nel caricamento della dashboard: {str(e)}', 'error')
