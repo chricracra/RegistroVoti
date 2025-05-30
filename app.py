@@ -3,14 +3,20 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 import os
-from sqlalchemy import inspect  # Import aggiuntivo
+import json  # Aggiungi questa linea
+from sqlalchemy import inspect
 
-# 1. Creazione dell'app Flask
 app = Flask(__name__)
 
-# 2. Configurazione del database
+# Leggi la secret key dall'ambiente
+app.secret_key = os.environ.get('SECRET_KEY', 'default-secret-key')
+
+# Configurazione database
 basedir = os.path.abspath(os.path.dirname(__file__))
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'site.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
+    'DATABASE_URL', 
+    'sqlite:///' + os.path.join(basedir, 'site.db')
+)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_pre_ping': True,
@@ -18,9 +24,7 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_timeout': 20
 }
 app.permanent_session_lifetime = timedelta(days=30)
-app.secret_key = 'supersecretkey'
 
-# 3. Inizializzazione del database
 db = SQLAlchemy(app)
 
 # 4. Modelli
