@@ -1,5 +1,7 @@
 import os
 import json
+import re
+from urllib.parse import urlparse
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -7,48 +9,62 @@ from datetime import datetime, timedelta
 from sqlalchemy import inspect
 
 app = Flask(__name__)
+
+# Configurazione iniziale
 app.secret_key = os.environ.get('SECRET_KEY', 'default-secret-key')
 
+# Funzione per correggere la connection string
+def create_db_uri():
+    db_url = os.environ.get('DATABASE_URL', '')
+    
+    if not db_url:
+        # Modalità sviluppo locale con SQLite
+        basedir = os.path.abspath(os.path.dirname(__file__))
+        instance_path = os.path.join(basedir, 'instance')
+        os.makedirs(instance_path, exist_ok=True)
+        return f'sqlite:///{os.path.join(instance_path, "site.db")}'
+    
+    # Correzione per Render + Neon
+    if db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
+    
+    # Analizza la URL per gestire i parametri
+    parsed = urlparse(db_url)
+    
+    # Assicurati che ci siano i parametri SSL necessari
+    query_params = {}
+    if parsed.query:
+        query_params = dict(param.split('=') for param in parsed.query.split('&'))
+    
+    if 'sslmode' not in query_params:
+        query_params['sslmode'] = 'require'
+    
+    # Aggiungi parametri di ottimizzazione
+    query_params['pool_timeout'] = '20'
+    query_params['connect_timeout'] = '10'
+    
+    # Ricostruisci la query string
+    new_query = '&'.join([f"{k}={v}" for k, v in query_params.items()])
+    
+    # Ricostruisci la connection string
+    new_uri = f"{parsed.scheme}://{parsed.netloc}{parsed.path}?{new_query}"
+    
+    return new_uri
+
 # Configurazione database
-basedir = os.path.abspath(os.path.dirname(__file__))
-instance_path = os.path.join(basedir, 'instance')
-
-# Funzione per creare cartelle
-def create_app_dirs():
-    required_dirs = [instance_path]
-    for dir_path in required_dirs:
-        if not os.path.exists(dir_path):
-            os.makedirs(dir_path)
-
-# Crea cartelle in produzione
-if os.environ.get('RENDER'):
-    create_app_dirs()
-
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
-    'DATABASE_URL', 
-    f'sqlite:///{os.path.join(instance_path, "site.db")}'
-)
+app.config['SQLALCHEMY_DATABASE_URI'] = create_db_uri()
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_pre_ping': True,
-    'pool_recycle': 299,
-    'pool_timeout': 20
+    'pool_recycle': 300,
+    'pool_size': 10,
+    'max_overflow': 20
 }
 app.permanent_session_lifetime = timedelta(days=30)
 
 db = SQLAlchemy(app)
 
-
-def create_app_dirs():
-    required_dirs = [
-        os.path.join(basedir, 'instance'),
-    ]
-    for dir_path in required_dirs:
-        if not os.path.exists(dir_path):
-            os.makedirs(dir_path)
-
-
-# 4. Modelli
+# Modelli
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
@@ -73,23 +89,7 @@ class Grade(db.Model):
     date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=False)
 
-# 5. Funzione per ottenere i nomi delle tabelle
-def get_table_names(engine):
-    inspector = inspect(engine)
-    return inspector.get_table_names()
-
-# 6. Creazione tabelle DENTRO un contesto applicativo
-with app.app_context():
-    # Controlla se il database esiste già
-    db_file = os.path.join(basedir, 'site.db')
-    db_exists = os.path.exists(db_file)
-    
-    # Crea tutte le tabelle
-    db.create_all()
-    print(f"Database initialized. Existed: {db_exists}")
-    print("Tabelle create:", get_table_names(db.engine))
-
-# 7. Funzioni di calcolo
+# Funzioni di calcolo
 def calculate_weighted_average(grades):
     if not grades:
         return 0
@@ -119,10 +119,16 @@ def calculate_overall_average(user):
     total_weight = sum(weights)
     return round(total / total_weight, 2)
 
-# ... (il resto del codice delle routes rimane invariato) ...
+# Creazione tabelle al primo avvio
+@app.before_first_request
+def create_tables():
+    try:
+        db.create_all()
+        print("Tabelle create con successo!")
+    except Exception as e:
+        print(f"Errore nella creazione delle tabelle: {str(e)}")
 
-
-# 7. Routes
+# Routes
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -256,7 +262,7 @@ def add_grade(subject_id):
             value=value,
             weight=weight,
             subject_id=subject_id,
-            date=datetime.utcnow()  # Data corrente
+            date=datetime.utcnow()
         )
         
         db.session.add(new_grade)
@@ -306,29 +312,12 @@ def delete_subject(subject_id):
     flash('Materia eliminata con successo!', 'success')
     return redirect(url_for('dashboard'))
 
-# 8. Debug route
-@app.route('/debug_db')
-def debug_db():
-    try:
-        with app.app_context():
-            # Ottieni i nomi delle tabelle
-            table_names = get_table_names(db.engine)
-            user_count = User.query.count()
-            subject_count = Subject.query.count()
-            grade_count = Grade.query.count()
-            
-            return (
-                f"Database funzionante!<br>"
-                f"Tabelle: {table_names}<br>"
-                f"Utenti: {user_count}<br>"
-                f"Materie: {subject_count}<br>"
-                f"Voti: {grade_count}"
-            )
-    except Exception as e:
-        return f"Errore database: {str(e)}"
-
-# 10. Avvio applicazione
+# Avvio applicazione
 if __name__ == '__main__':
-    create_app_dirs()  # Crea cartelle in locale
+    # Crea le cartelle necessarie in locale
+    if not os.environ.get('DATABASE_URL'):
+        instance_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance')
+        os.makedirs(instance_path, exist_ok=True)
+    
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
