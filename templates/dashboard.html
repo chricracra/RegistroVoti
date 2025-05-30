@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Registro Voti</title>
+    <style>
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        body { max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f5f5f7; color: #333; }
+        header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; border-bottom: 1px solid #e0e0e0; margin-bottom: 20px; }
+        .user-info { display: flex; align-items: center; gap: 10px; }
+        .welcome { font-size: 18px; font-weight: 500; }
+        .username { color: #2575fc; font-weight: 600; }
+        .logout-btn { background: #ff6b6b; color: white; border: none; border-radius: 6px; padding: 8px 15px; cursor: pointer; }
+        .stats-card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: center; }
+        .overall-avg { font-size: 2.5em; font-weight: 700; color: #2575fc; margin: 10px 0; }
+        .card-title { font-size: 1.2em; color: #7f8c8d; margin: 0; }
+        .card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .subject-name { font-size: 1.3em; font-weight: 600; color: #2c3e50; }
+        .subject-avg { font-size: 1.2em; font-weight: 600; color: #ff6b6b; }
+        .subject-stats { display: flex; gap: 15px; }
+        .stat { background: #f8f9fa; border-radius: 8px; padding: 8px 15px; }
+        .add-form { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-top: 20px; }
+        input, button { padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
+        button { background: #2575fc; color: white; border: none; cursor: pointer; font-weight: 500; }
+        .delete-btn { background: #ff6b6b; }
+        .subjects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+        .subject-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: transform 0.2s; border-left: 4px solid #2575fc; }
+        .subject-card:hover { transform: translateY(-5px); }
+        .subject-card h3 { margin-top: 0; color: #2c3e50; }
+        .subject-card a { display: block; text-align: center; background: #f1f8ff; color: #2575fc; padding: 10px; border-radius: 8px; text-decoration: none; margin-top: 15px; }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+            margin-top: 20px;
+        }
+        @media (max-width: 600px) {
+            .add-form { grid-template-columns: 1fr; }
+            .subjects-grid { grid-template-columns: 1fr; }
+            .chart-container {
+                height: 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <h1>📚 Registro Voti</h1>
+        </div>
+        <div class="user-info">
+            <div class="welcome">Ciao <span class="username">{{ username }}</span></div>
+            <a href="{{ url_for('logout') }}">
+                <button class="logout-btn">Esci</button>
+            </a>
+        </div>
+    </header>
+
+    <div class="stats-card">
+        <p class="card-title">La tua media generale</p>
+        <div class="overall-avg">{{ overall_avg }}</div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2>Le tue materie</h2>
+        </div>
+        
+        <div class="subjects-grid">
+            {% for subject in subjects %}
+            <div class="subject-card">
+                <h3>{{ subject.name }}</h3>
+                <p>Media: {{ subject.average }}</p>
+                <p>Voti: {{ subject.grade_count }}</p>
+                <p>Completezza: {{ subject.completion }}%</p>
+                <a href="{{ url_for('view_subject', subject_id=subject.id) }}">Gestisci voti</a>
+            </div>
+            {% else %}
+            <p>Nessuna materia registrata</p>
+            {% endfor %}
+        </div>
+        
+        <form class="add-form" method="POST" action="{{ url_for('add_subject') }}">
+            <input type="text" name="name" placeholder="Nome nuova materia" required>
+            <button type="submit">Aggiungi Materia</button>
+        </form>
+    </div>
+
+    <!-- Grafico a stella per completezza -->
+    <div class="card">
+        <h2>📊 Completezza Materie</h2>
+        <div class="chart-container">
+            <canvas id="radarChart"></canvas>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Grafico a stella (radar)
+        const radarCtx = document.getElementById('radarChart').getContext('2d');
+        const radarChart = new Chart(radarCtx, {
+            type: 'radar',
+            data: {
+                labels: JSON.parse('{{ radar_labels | safe }}'),
+                datasets: [{
+                    label: 'Completezza (%)',
+                    data: JSON.parse('{{ radar_data | safe }}'),
+                    fill: true,
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgb(54, 162, 235)',
+                    pointBackgroundColor: 'rgb(54, 162, 235)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgb(54, 162, 235)'
+                }]
+            },
+            options: {
+                scales: {
+                    r: {
+                        min: 0,
+                        max: 100,
+                        ticks: {
+                            stepSize: 20
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Livello di Completezza per Materia'
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
