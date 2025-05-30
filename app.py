@@ -1,18 +1,28 @@
+import os
+import json
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
-import os
-import json  # Aggiungi questa linea
 from sqlalchemy import inspect
 
 app = Flask(__name__)
-
-# Leggi la secret key dall'ambiente
 app.secret_key = os.environ.get('SECRET_KEY', 'default-secret-key')
 
-if not os.path.exists(instance_path):
-    os.makedirs(instance_path)
+# Configurazione database
+basedir = os.path.abspath(os.path.dirname(__file__))
+instance_path = os.path.join(basedir, 'instance')
+
+# Funzione per creare cartelle
+def create_app_dirs():
+    required_dirs = [instance_path]
+    for dir_path in required_dirs:
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+
+# Crea cartelle in produzione
+if os.environ.get('RENDER'):
+    create_app_dirs()
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
     'DATABASE_URL', 
@@ -27,6 +37,7 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 app.permanent_session_lifetime = timedelta(days=30)
 
 db = SQLAlchemy(app)
+
 
 def create_app_dirs():
     required_dirs = [
@@ -318,7 +329,6 @@ def debug_db():
 
 # 10. Avvio applicazione
 if __name__ == '__main__':
-    with app.app_context():
-        create_app_dirs()
+    create_app_dirs()  # Crea cartelle in locale
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
