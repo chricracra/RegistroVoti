@@ -1,452 +1,166 @@
-import os
-import json
-import re
-from urllib.parse import urlparse
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+from flask import Flask, render_template, redirect, url_for, request, jsonify, flash
 from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from flask_wtf.csrf import CSRFProtect
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, timedelta
-from sqlalchemy import inspect, text
-from flask import request, jsonify
-
+import os
+from datetime import datetime
 
 app = Flask(__name__)
-
-# Configurazione iniziale
-app.secret_key = os.environ.get('SECRET_KEY', 'default-secret-key')
-
-# Funzione per correggere la connection string
-def create_db_uri():
-    db_url = os.environ.get('DATABASE_URL', '')
-    
-    if not db_url:
-        # Modalità sviluppo locale con SQLite
-        basedir = os.path.abspath(os.path.dirname(__file__))
-        instance_path = os.path.join(basedir, 'instance')
-        os.makedirs(instance_path, exist_ok=True)
-        return f'sqlite:///{os.path.join(instance_path, "site.db")}'
-    
-    # Correzione per Render + Neon
-    if db_url.startswith("postgres://"):
-        db_url = db_url.replace("postgres://", "postgresql://", 1)
-    
-    return db_url
-
-# Configurazione database
-app.config['SQLALCHEMY_DATABASE_URI'] = create_db_uri()
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-secret-key')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL').replace("postgres://", "postgresql://", 1)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'pool_pre_ping': True,
-    'pool_recycle': 300,
-    'pool_size': 10,
-    'max_overflow': 20
-}
-app.permanent_session_lifetime = timedelta(days=30)
 
 db = SQLAlchemy(app)
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
+csrf = CSRFProtect(app)
 
-# Modelli semplificati
-class User(db.Model):
-    __tablename__ = 'users'
+# Modelli
+class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    password = db.Column(db.String(120), nullable=False)
-    theme_preference = db.Column(db.String(10), default='light')  # Aggiungi questo campo
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(200), nullable=False)
+    theme_preference = db.Column(db.String(10), default='light')
+    subjects = db.relationship('Subject', backref='user', lazy=True)
+    grades = db.relationship('Grade', backref='user', lazy=True)
 
 class Subject(db.Model):
-    __tablename__ = 'subjects'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    user_id = db.Column(db.Integer, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    grades = db.relationship('Grade', backref='subject', lazy=True, cascade="all, delete-orphan")
+    
+    @property
+    def avg(self):
+        if not self.grades:
+            return 0
+        total = sum(grade.value * grade.weight for grade in self.grades)
+        weights = sum(grade.weight for grade in self.grades)
+        return round(total / weights, 2) if weights else 0
 
 class Grade(db.Model):
-    __tablename__ = 'grades'
     id = db.Column(db.Integer, primary_key=True)
     value = db.Column(db.Float, nullable=False)
-    weight = db.Column(db.Float, nullable=False, default=1.0)
-    date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    subject_id = db.Column(db.Integer, nullable=False)
+    weight = db.Column(db.Float, default=1.0)
+    date = db.Column(db.DateTime, default=datetime.utcnow)
+    subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-# Funzione per verificare e creare le tabelle
-def initialize_database():
-    with app.app_context():
-        try:
-            # Verifica se le tabelle esistono già
-            inspector = inspect(db.engine)
-            existing_tables = inspector.get_table_names()
-            required_tables = {'users', 'subjects', 'grades'}
-            
-            # Crea le tabelle mancanti
-            for table in required_tables:
-                if table not in existing_tables:
-                    print(f"Creazione tabella: {table}")
-                    
-                    if table == 'users':
-                        db.session.execute(text("""
-                            CREATE TABLE users (
-                                id SERIAL PRIMARY KEY,
-                                username VARCHAR(80) UNIQUE NOT NULL,
-                                password VARCHAR(120) NOT NULL
-                            )
-                        """))
-                    elif table == 'subjects':
-                        db.session.execute(text("""
-                            CREATE TABLE subjects (
-                                id SERIAL PRIMARY KEY,
-                                name VARCHAR(100) NOT NULL,
-                                user_id INTEGER NOT NULL
-                            )
-                        """))
-                    elif table == 'grades':
-                        db.session.execute(text("""
-                            CREATE TABLE grades (
-                                id SERIAL PRIMARY KEY,
-                                value FLOAT NOT NULL,
-                                weight FLOAT NOT NULL DEFAULT 1.0,
-                                date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                                subject_id INTEGER NOT NULL
-                            )
-                        """))
-                    
-                    db.session.commit()
-                    print(f"Tabella {table} creata con successo")
-            
-            print("Verifica database completata")
-            return True
-        except Exception as e:
-            print(f"Errore inizializzazione DB: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            return False
-
-# Esegui l'inizializzazione all'avvio
-initialize_database()
-
-# Funzioni di calcolo
-def calculate_weighted_average(grades):
-    if not grades:
-        return 0
-    weighted_sum = sum(grade.value * grade.weight for grade in grades)
-    total_weight = sum(grade.weight for grade in grades)
-    return round(weighted_sum / total_weight, 2) if total_weight else 0
-
-# Modifica la funzione calculate_overall_average
-def calculate_overall_average(user_id):
-    try:
-        # Calcola la media generale come media delle medie delle materie
-        subjects = db.session.execute(
-            text("SELECT id FROM subjects WHERE user_id = :user_id"),
-            {'user_id': user_id}
-        ).fetchall()
-        
-        if not subjects:
-            return 0
-        
-        total_avg = 0
-        count = 0
-        
-        for subject in subjects:
-            grades = db.session.execute(
-                text("SELECT value, weight FROM grades WHERE subject_id = :subject_id"),
-                {'subject_id': subject.id}
-            ).fetchall()
-            
-            if grades:
-                weighted_sum = sum(g.value * g.weight for g in grades)
-                total_weight = sum(g.weight for g in grades)
-                subject_avg = weighted_sum / total_weight if total_weight else 0
-                total_avg += subject_avg
-                count += 1
-        
-        return round(total_avg / count, 2) if count else 0
-    except Exception as e:
-        print(f"Errore calcolo media generale: {str(e)}")
-        return 0
+# Setup Login Manager
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
 # Routes
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        
-        try:
-            # Verifica se l'utente esiste già
-            existing_user = db.session.execute(
-                text("SELECT * FROM users WHERE username = :username"),
-                {'username': username}
-            ).fetchone()
-            
-            if existing_user:
-                flash('Username già esistente!', 'error')
-                return redirect(url_for('register'))
-            
-            hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
-            
-            # Crea nuovo utente
-            db.session.execute(
-                text("INSERT INTO users (username, password) VALUES (:username, :password)"),
-                {'username': username, 'password': hashed_password}
-            )
-            db.session.commit()
-            
-            flash('Registrazione completata! Effettua il login.', 'success')
-            return redirect(url_for('login'))
-        
-        except Exception as e:
-            flash(f'Errore durante la registrazione: {str(e)}', 'error')
-            db.session.rollback()
-    
-    return render_template('register.html')
+@app.route('/')
+def home():
+    return redirect(url_for('dashboard') if current_user.is_authenticated else url_for('login'))
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    subjects = Subject.query.filter_by(user_id=current_user.id).all()
+    overall_avg = round(sum(subject.avg for subject in subjects) / len(subjects), 2) if subjects else 0
+    return render_template('dashboard.html', subjects=subjects, overall_avg=overall_avg)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        
-        try:
-            user = db.session.execute(
-                text("SELECT * FROM users WHERE username = :username"),
-                {'username': username}
-            ).fetchone()
-            
-            if user and check_password_hash(user.password, password):
-                session.permanent = True
-                session['user_id'] = user.id
-                session['username'] = user.username
-                return redirect(url_for('dashboard'))
-            else:
-                flash('Credenziali non valide!', 'error')
-        
-        except Exception as e:
-            flash(f'Errore durante il login: {str(e)}', 'error')
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
     
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        user = User.query.filter_by(email=email).first()
+        
+        if user and check_password_hash(user.password, password):
+            login_user(user)
+            return redirect(url_for('dashboard'))
+        flash('Email o password non validi', 'danger')
     return render_template('login.html')
 
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    
+    if request.method == 'POST':
+        username = request.form['username']
+        email = request.form['email']
+        password = request.form['password']
+        
+        if User.query.filter_by(email=email).first():
+            flash('Email già registrata', 'danger')
+            return redirect(url_for('register'))
+        
+        hashed_password = generate_password_hash(password)
+        new_user = User(username=username, email=email, password=hashed_password)
+        db.session.add(new_user)
+        db.session.commit()
+        flash('Registrazione completata! Effettua il login', 'success')
+        return redirect(url_for('login'))
+    return render_template('register.html'))
+
 @app.route('/logout')
+@login_required
 def logout():
-    session.clear()
+    logout_user()
     return redirect(url_for('login'))
 
-# Modifica la funzione dashboard
-@app.route('/')
-def dashboard():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    user_id = session['user_id']
-    
-    try:
-        subjects = db.session.execute(
-            text("SELECT * FROM subjects WHERE user_id = :user_id"),
-            {'user_id': user_id}
-        ).fetchall()
-        
-        subjects_data = []
-        subject_avgs = []  # Per il grafico a stella
-        
-        for subject in subjects:
-            grades = db.session.execute(
-                text("SELECT * FROM grades WHERE subject_id = :subject_id"),
-                {'subject_id': subject.id}
-            ).fetchall()
-            
-            avg = calculate_weighted_average(grades) if grades else 0
-            subjects_data.append({
-                'id': subject.id,
-                'name': subject.name,
-                'average': avg,
-                'grade_count': len(grades)
-            })
-            subject_avgs.append(avg)  # Aggiungi la media al grafico
-        
-        overall_avg = calculate_overall_average(user_id)
-        
-        return render_template('dashboard.html',
-                               subjects=subjects_data,
-                               overall_avg=overall_avg,
-                               username=session['username'],
-                               radar_labels=json.dumps([s.name for s in subjects]),
-                               radar_data=json.dumps(subject_avgs))
-    
-    except Exception as e:
-        flash(f'Errore nel caricamento della dashboard: {str(e)}', 'error')
-        return redirect(url_for('login'))
-
 @app.route('/add_subject', methods=['POST'])
+@login_required
 def add_subject():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
     name = request.form['name']
-    if name:
-        try:
-            # Aggiungi nuova materia
-            db.session.execute(
-                text("INSERT INTO subjects (name, user_id) VALUES (:name, :user_id)"),
-                {'name': name, 'user_id': session['user_id']}
-            )
-            db.session.commit()
-            flash('Materia aggiunta con successo!', 'success')
-        except Exception as e:
-            flash(f'Errore nell\'aggiunta della materia: {str(e)}', 'error')
-            db.session.rollback()
-    
+    new_subject = Subject(name=name, user_id=current_user.id)
+    db.session.add(new_subject)
+    db.session.commit()
     return redirect(url_for('dashboard'))
 
-@app.route('/subject/<int:subject_id>')
-def view_subject(subject_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    try:
-        # Recupera la materia
-        subject = db.session.execute(
-            text("SELECT * FROM subjects WHERE id = :id AND user_id = :user_id"),
-            {'id': subject_id, 'user_id': session['user_id']}
-        ).fetchone()
-        
-        if not subject:
-            flash('Materia non trovata!', 'error')
-            return redirect(url_for('dashboard'))
-        
-        # Recupera i voti della materia
-        grades = db.session.execute(
-            text("SELECT * FROM grades WHERE subject_id = :subject_id ORDER BY date"),
-            {'subject_id': subject_id}
-        ).fetchall()
-        
-        # Calcola la media
-        average = calculate_weighted_average(grades)
-        
-        # Prepara dati per il grafico
-        chart_dates = [g.date.strftime('%Y-%m-%d') for g in grades] if grades else []
-        chart_values = [g.value for g in grades] if grades else []
-        
-        return render_template('subject.html',
-                               subject=subject,
-                               average=average,
-                               grades=grades,
-                               chart_dates=json.dumps(chart_dates),
-                               chart_values=json.dumps(chart_values))
-    
-    except Exception as e:
-        flash(f'Errore nel caricamento della materia: {str(e)}', 'error')
-        return redirect(url_for('dashboard'))
-
-@app.route('/add_grade/<int:subject_id>', methods=['POST'])
-def add_grade(subject_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    try:
-        value = float(request.form['value'])
-        weight = float(request.form.get('weight', 1))
-        
-        # Verifica che la materia appartenga all'utente
-        subject = db.session.execute(
-            text("SELECT id FROM subjects WHERE id = :id AND user_id = :user_id"),
-            {'id': subject_id, 'user_id': session['user_id']}
-        ).fetchone()
-        
-        if not subject:
-            flash('Materia non trovata!', 'error')
-            return redirect(url_for('dashboard'))
-        
-        # Aggiungi nuovo voto
-        db.session.execute(
-            text("""
-                INSERT INTO grades (value, weight, date, subject_id)
-                VALUES (:value, :weight, CURRENT_TIMESTAMP, :subject_id)
-            """),
-            {
-                'value': value,
-                'weight': weight,
-                'subject_id': subject_id
-            }
-        )
+@app.route('/delete_subject/<int:id>')
+@login_required
+def delete_subject(id):
+    subject = Subject.query.get_or_404(id)
+    if subject.user_id == current_user.id:
+        db.session.delete(subject)
         db.session.commit()
-        flash('Voto aggiunto con successo!', 'success')
-    
-    except ValueError:
-        flash('Valore non valido!', 'error')
-    except Exception as e:
-        flash(f'Errore nell\'aggiunta del voto: {str(e)}', 'error')
-        db.session.rollback()
-    
-    return redirect(url_for('view_subject', subject_id=subject_id))
+    return redirect(url_for('dashboard'))
 
-@app.route('/delete_grade/<int:grade_id>', methods=['POST'])
+@app.route('/subject/<int:id>')
+@login_required
+def subject(id):
+    subject = Subject.query.get_or_404(id)
+    if subject.user_id != current_user.id:
+        return redirect(url_for('dashboard'))
+    return render_template('subject.html', subject=subject)
+
+@app.route('/add_grade', methods=['POST'])
+@login_required
+def add_grade():
+    subject_id = request.form['subject_id']
+    value = float(request.form['value'])
+    weight = float(request.form.get('weight', 1.0))
+    
+    new_grade = Grade(
+        value=value, 
+        weight=weight, 
+        subject_id=subject_id,
+        user_id=current_user.id
+    )
+    db.session.add(new_grade)
+    db.session.commit()
+    return redirect(url_for('subject', id=subject_id))
+
+@app.route('/delete_grade/<int:grade_id>')
+@login_required
 def delete_grade(grade_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    try:
-        # Verifica che il voto appartenga all'utente
-        grade = db.session.execute(
-            text("""
-                SELECT g.id, g.subject_id
-                FROM grades g
-                JOIN subjects s ON g.subject_id = s.id
-                WHERE g.id = :grade_id AND s.user_id = :user_id
-            """),
-            {'grade_id': grade_id, 'user_id': session['user_id']}
-        ).fetchone()
-        
-        if not grade:
-            flash('Voto non trovato!', 'error')
-            return redirect(url_for('dashboard'))
-        
-        # Elimina il voto
-        db.session.execute(
-            text("DELETE FROM grades WHERE id = :id"),
-            {'id': grade_id}
-        )
+    grade = Grade.query.get_or_404(grade_id)
+    if grade.user_id == current_user.id:
+        subject_id = grade.subject_id
+        db.session.delete(grade)
         db.session.commit()
-        flash('Voto eliminato con successo!', 'success')
-        return redirect(url_for('view_subject', subject_id=grade.subject_id))
-    
-    except Exception as e:
-        flash(f'Errore nell\'eliminazione del voto: {str(e)}', 'error')
-        db.session.rollback()
-        return redirect(url_for('dashboard'))
-
-@app.route('/delete_subject/<int:subject_id>', methods=['POST'])
-def delete_subject(subject_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    try:
-        # Verifica che la materia appartenga all'utente
-        subject = db.session.execute(
-            text("SELECT id FROM subjects WHERE id = :id AND user_id = :user_id"),
-            {'id': subject_id, 'user_id': session['user_id']}
-        ).fetchone()
-        
-        if not subject:
-            flash('Materia non trovata!', 'error')
-            return redirect(url_for('dashboard'))
-        
-        # Elimina prima tutti i voti associati
-        db.session.execute(
-            text("DELETE FROM grades WHERE subject_id = :subject_id"),
-            {'subject_id': subject_id}
-        )
-        
-        # Elimina la materia
-        db.session.execute(
-            text("DELETE FROM subjects WHERE id = :id"),
-            {'id': subject_id}
-        )
-        
-        db.session.commit()
-        flash('Materia eliminata con successo!', 'success')
-    
-    except Exception as e:
-        flash(f'Errore nell\'eliminazione della materia: {str(e)}', 'error')
-        db.session.rollback()
-    
+        return redirect(url_for('subject', id=subject_id))
     return redirect(url_for('dashboard'))
 
 @app.route('/delete_account', methods=['POST'])
@@ -454,8 +168,8 @@ def delete_subject(subject_id):
 def delete_account():
     try:
         # Elimina tutti i dati correlati all'utente
-        db.session.query(Grade).filter(Grade.user_id == current_user.id).delete()
-        db.session.query(Subject).filter(Subject.user_id == current_user.id).delete()
+        Grade.query.filter_by(user_id=current_user.id).delete()
+        Subject.query.filter_by(user_id=current_user.id).delete()
         
         # Elimina l'utente
         user = User.query.get(current_user.id)
@@ -478,8 +192,22 @@ def update_theme():
         return jsonify(success=True)
     return jsonify(success=False), 400
 
+@app.route('/health')
+def health_check():
+    try:
+        db.session.execute("SELECT 1")
+        return jsonify(status="OK"), 200
+    except:
+        return jsonify(status="DB Error"), 500
 
-# Avvio applicazione
+# Security headers
+@app.after_request
+def add_security_headers(resp):
+    resp.headers['Content-Security-Policy'] = "default-src 'self'"
+    resp.headers['X-Content-Type-Options'] = 'nosniff'
+    return resp
+
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    with app.app_context():
+        db.create_all()
+    app.run(debug=True)
