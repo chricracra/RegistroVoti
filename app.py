@@ -101,7 +101,7 @@ def register():
         db.session.commit()
         flash('Registrazione completata! Effettua il login', 'success')
         return redirect(url_for('login'))
-    return render_template('register.html'))
+    return render_template('register.html')  # CORRETTO: rimosso il parentesi extra
 
 @app.route('/logout')
 @login_required
