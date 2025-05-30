@@ -29,6 +29,9 @@
     <!-- Aggiungi Materia -->
     <div class="subject-card" style="margin-bottom: 2rem;">
         <form action="{{ url_for('add_subject') }}" method="POST">
+            <!-- Campo nascosto per CSRF token -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
             <div class="add-grade-form">
                 <input type="text" name="name" placeholder="Aggiungi una nuova materia" required>
                 <button type="submit" class="btn-primary">Aggiungi</button>
@@ -47,7 +50,10 @@
             
             <!-- Form Aggiungi Voto -->
             <form action="{{ url_for('add_grade') }}" method="POST">
+                <!-- Campo nascosto per CSRF token -->
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="subject_id" value="{{ subject.id }}">
+                
                 <div class="add-grade-form">
                     <input type="number" step="0.1" min="0" max="10" name="value" placeholder="Voto" required>
                     <input type="number" step="0.1" min="0.1" name="weight" placeholder="Peso" value="1.0" required>
