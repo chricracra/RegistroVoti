@@ -78,6 +78,9 @@
     </div>
 
     <script>
+        // Aggiungi questa variabile globale per CSRF
+        const csrfToken = "{{ csrf_token() }}";
+        
         // Gestione tema
         function setTheme(theme) {
             document.documentElement.setAttribute('data-theme', theme);
@@ -88,7 +91,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': '{{ csrf_token() }}'
+                        'X-CSRFToken': csrfToken  // Aggiungi token CSRF
                     },
                     body: JSON.stringify({ theme: theme })
                 });
@@ -120,22 +123,10 @@
                         method: 'POST',
                         headers: { 
                             'Content-Type': 'application/json',
-                            'X-CSRFToken': '{{ csrf_token() }}'
+                            'X-CSRFToken': csrfToken  // Aggiungi token CSRF
                         }
                     })
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            window.location.href = "{{ url_for('login') }}";
-                        } else {
-                            alert('Errore durante l\'eliminazione: ' + (data.error || ''));
-                        }
-                    });
-                });
-            }
-        });
-    </script>
-    
-    {% block scripts %}{% endblock %}
-</body>
-</html>
+                            window.location.href
