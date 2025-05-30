@@ -2,7 +2,6 @@ from flask import Flask, render_template, redirect, url_for, request, jsonify, f
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_wtf.csrf import CSRFProtect
-from flask_migrate import Migrate  # Aggiungi questa importazione
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 from datetime import datetime
@@ -18,13 +17,9 @@ login_manager.login_view = 'login'
 login_manager.login_message = "Effettua l'accesso per accedere a questa pagina"
 login_manager.login_message_category = "info"
 
-
 # Configurazione CSRF corretta
 csrf = CSRFProtect()
 csrf.init_app(app)
-
-# Aggiungi questa riga per Flask-Migrate
-migrate = Migrate(app, db)
 
 # Modelli
 class User(db.Model, UserMixin):
@@ -215,11 +210,13 @@ def add_security_headers(resp):
     resp.headers['X-Content-Type-Options'] = 'nosniff'
     return resp
 
+# Esegui le migrazioni all'avvio
+with app.app_context():
+    try:
+        db.create_all()
+        print("Tabelle create con successo")
+    except Exception as e:
+        print(f"Errore nella creazione delle tabelle: {str(e)}")
+
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
     app.run(debug=True)
-else:
-    # Esegui questo in produzione su Render.com
-    with app.app_context():
-        db.create_all()
