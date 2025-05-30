@@ -3,6 +3,9 @@
 <div class="form-container">
     <h2 class="form-title">Accedi al Registro</h2>
     <form action="{{ url_for('login') }}" method="POST">
+        <!-- Campo nascosto per CSRF token -->
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
         <div class="form-group">
             <label for="username">Username</label>
             <input type="text" id="username" name="username" required>
