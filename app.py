@@ -28,6 +28,15 @@ app.permanent_session_lifetime = timedelta(days=30)
 
 db = SQLAlchemy(app)
 
+def create_app_dirs():
+    required_dirs = [
+        os.path.join(basedir, 'instance'),
+    ]
+    for dir_path in required_dirs:
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+
+
 # 4. Modelli
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -309,5 +318,7 @@ def debug_db():
 
 # 10. Avvio applicazione
 if __name__ == '__main__':
+    with app.app_context():
+        create_app_dirs()
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
