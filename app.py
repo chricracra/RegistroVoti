@@ -18,13 +18,13 @@ login_manager.login_view = 'login'
 login_manager.login_message = "Effettua l'accesso per accedere a questa pagina"
 login_manager.login_message_category = "info"
 
-# Aggiungi questa riga per Flask-Migrate
-migrate = Migrate(app, db)
-
 
 # Configurazione CSRF corretta
 csrf = CSRFProtect()
 csrf.init_app(app)
+
+# Aggiungi questa riga per Flask-Migrate
+migrate = Migrate(app, db)
 
 # Modelli
 class User(db.Model, UserMixin):
