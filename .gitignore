@@ -1,0 +1,10 @@
+# File di ambiente
+.env
+
+# Cache Python
+__pycache__/
+*.pyc
+
+# Database SQLite
+site.db
+instance/
