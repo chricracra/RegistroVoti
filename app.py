@@ -7,6 +7,8 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 from sqlalchemy import inspect, text
+from flask import request, jsonify
+
 
 app = Flask(__name__)
 
@@ -445,6 +447,36 @@ def delete_subject(subject_id):
         db.session.rollback()
     
     return redirect(url_for('dashboard'))
+
+@app.route('/delete_account', methods=['POST'])
+@login_required
+def delete_account():
+    try:
+        # Elimina tutti i dati correlati all'utente
+        db.session.query(Grade).filter(Grade.user_id == current_user.id).delete()
+        db.session.query(Subject).filter(Subject.user_id == current_user.id).delete()
+        
+        # Elimina l'utente
+        user = User.query.get(current_user.id)
+        db.session.delete(user)
+        db.session.commit()
+        
+        logout_user()
+        return jsonify(success=True)
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(success=False, error=str(e)), 500
+
+@app.route('/update_theme', methods=['POST'])
+@login_required
+def update_theme():
+    theme = request.json.get('theme')
+    if theme in ['light', 'dark']:
+        current_user.theme_preference = theme
+        db.session.commit()
+        return jsonify(success=True)
+    return jsonify(success=False), 400
+
 
 # Avvio applicazione
 if __name__ == '__main__':
