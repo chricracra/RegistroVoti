@@ -22,7 +22,6 @@ csrf = CSRFProtect(app)
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
     theme_preference = db.Column(db.String(10), default='light')
     subjects = db.relationship('Subject', backref='user', lazy=True)
@@ -90,15 +89,14 @@ def register():
     
     if request.method == 'POST':
         username = request.form['username']
-        email = request.form['email']
         password = request.form['password']
         
-        if User.query.filter_by(email=email).first():
-            flash('Email già registrata', 'danger')
+        if User.query.filter_by(username=username).first():
+            flash('Username già registrato', 'danger')
             return redirect(url_for('register'))
         
         hashed_password = generate_password_hash(password)
-        new_user = User(username=username, email=email, password=hashed_password)
+        new_user = User(username=username, password=hashed_password)
         db.session.add(new_user)
         db.session.commit()
         flash('Registrazione completata! Effettua il login', 'success')
