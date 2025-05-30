@@ -214,3 +214,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=True)
+else:
+    # Esegui questo in produzione su Render.com
+    with app.app_context():
+        db.create_all()
