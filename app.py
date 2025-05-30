@@ -11,11 +11,12 @@ app = Flask(__name__)
 # Leggi la secret key dall'ambiente
 app.secret_key = os.environ.get('SECRET_KEY', 'default-secret-key')
 
-# Configurazione database
-basedir = os.path.abspath(os.path.dirname(__file__))
+if not os.path.exists(instance_path):
+    os.makedirs(instance_path)
+
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
     'DATABASE_URL', 
-    'sqlite:///' + os.path.join(basedir, 'site.db')
+    f'sqlite:///{os.path.join(instance_path, "site.db")}'
 )
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
