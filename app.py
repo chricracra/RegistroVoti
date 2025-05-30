@@ -16,7 +16,10 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message = "Effettua l'accesso per accedere a questa pagina"
 login_manager.login_message_category = "info"
-csrf = CSRFProtect(app)
+
+# Configurazione CSRF corretta
+csrf = CSRFProtect()
+csrf.init_app(app)
 
 # Modelli
 class User(db.Model, UserMixin):
