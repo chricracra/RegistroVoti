@@ -1,210 +1,149 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Registro Voti</title>
-    <style>
-        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-        body { max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f5f5f7; color: #333; }
-        header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; border-bottom: 1px solid #e0e0e0; margin-bottom: 20px; }
-        .user-info { display: flex; align-items: center; gap: 10px; }
-        .welcome { font-size: 18px; font-weight: 500; }
-        .username { color: #2575fc; font-weight: 600; }
-        .logout-btn { background: #ff6b6b; color: white; border: none; border-radius: 6px; padding: 8px 15px; cursor: pointer; }
-        .stats-card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: center; }
-        .overall-avg { font-size: 2.5em; font-weight: 700; color: #2575fc; margin: 10px 0; }
-        .card-title { font-size: 1.2em; color: #7f8c8d; margin: 0; }
-        
-        /* Grafico */
-        .chart-container {
-            position: relative;
-            height: 300px;
-            width: 100%;
-            margin: 20px 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        
-        /* Card materie */
-        .subjects-container {
-            margin-top: 30px;
-        }
-        .card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .subject-name { font-size: 1.3em; font-weight: 600; color: #2c3e50; }
-        .subject-avg { font-size: 1.2em; font-weight: 600; color: #ff6b6b; }
-        .subject-stats { display: flex; gap: 15px; }
-        .stat { background: #f8f9fa; border-radius: 8px; padding: 8px 15px; }
-        .add-form { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-top: 20px; }
-        input, button { padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
-        button { background: #2575fc; color: white; border: none; cursor: pointer; font-weight: 500; }
-        .delete-btn { background: #ff6b6b; }
-        .subjects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
-        
-        /* Card materia */
-        .subject-card { 
-            background: white; 
-            border-radius: 16px; 
-            padding: 20px; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
-            transition: transform 0.3s, box-shadow 0.3s; 
-            border-left: 4px solid #4a6fa5; 
-        }
-        .subject-card:hover { transform: translateY(-5px); box-shadow: 0 6px 15px rgba(0,0,0,0.1); }
-        .subject-card h3 { margin-top: 0; color: #2c3e50; margin-bottom: 10px; }
-        .subject-stats { display: flex; gap: 15px; margin: 15px 0; }
-        .stat { background: #f8f9fa; border-radius: 8px; padding: 10px; text-align: center; flex: 1; }
-        .stat-value { font-size: 1.4em; font-weight: 700; color: #2575fc; }
-        .stat-label { font-size: 0.9em; color: #7f8c8d; }
-        .subject-card a { 
-            display: block; 
-            text-align: center; 
-            background: #eef7ff; 
-            color: #2575fc; 
-            padding: 12px; 
-            border-radius: 8px; 
-            text-decoration: none; 
-            font-weight: 600; 
-            transition: background 0.3s; 
-        }
-        .subject-card a:hover { background: #d4e7ff; }
-        
-        @media (max-width: 600px) {
-            .add-form { grid-template-columns: 1fr; }
-            .subjects-grid { grid-template-columns: 1fr; }
-            .chart-container { height: 250px; }
-        }
-    </style>
-</head>
-<body>
-    <header>
-        <div class="logo">
-            <h1>📚 Registro Voti</h1>
+{% extends "base.html" %}
+{% block content %}
+<div class="dashboard-container">
+    <h1>Dashboard</h1>
+    
+    <!-- Riga Superiore: Media Generale + Grafico Radar -->
+    <div class="top-row">
+        <!-- Box Media Generale -->
+        <div class="summary-box">
+            <h3>Media Generale</h3>
+            <div class="average-value">{{ overall_avg }}</div>
+            <div class="performance-text">
+                {% if overall_avg >= 8 %} 
+                    <span style="color: var(--success);">Ottimo!</span>
+                {% elif overall_avg >= 6 %} 
+                    <span style="color: var(--warning);">Buono</span>
+                {% else %}
+                    <span style="color: var(--danger);">Da migliorare</span>
+                {% endif %}
+            </div>
         </div>
-        <div class="user-info">
-            <div class="welcome">Ciao <span class="username">{{ username }}</span></div>
-            <a href="{{ url_for('logout') }}">
-                <button class="logout-btn">Esci</button>
-            </a>
-        </div>
-    </header>
 
-    <div class="stats-card">
-        <p class="card-title">La tua media generale</p>
-        <div class="overall-avg">{{ overall_avg }}</div>
-    </div>
-
-    <!-- Grafico a stella per le medie -->
-    <div class="card">
-        <h2>📊 Media per Materia</h2>
-        <div class="chart-container">
+        <!-- Grafico Radar Semplificato -->
+        <div class="radar-container">
             <canvas id="radarChart"></canvas>
         </div>
     </div>
+    
+    <!-- Aggiungi Materia -->
+    <div class="subject-card" style="margin-bottom: 2rem;">
+        <form action="{{ url_for('add_subject') }}" method="POST">
+            <div class="add-grade-form">
+                <input type="text" name="name" placeholder="Aggiungi una nuova materia" required>
+                <button type="submit" class="btn-primary">Aggiungi</button>
+            </div>
+        </form>
+    </div>
 
-    <!-- Sezione materie -->
-    <div class="subjects-container">
-        <div class="card">
-            <div class="card-header">
-                <h2>Le tue materie</h2>
+    <!-- Materie -->
+    <div class="subjects-grid">
+        {% for subject in subjects %}
+        <div class="subject-card">
+            <div class="subject-header">
+                <h2 class="subject-name">{{ subject.name }}</h2>
+                <div class="subject-avg">{{ subject.avg }}</div>
             </div>
             
-            <div class="subjects-grid">
-                {% for subject in subjects %}
-                <div class="subject-card">
-                    <h3>{{ subject.name }}</h3>
-                    <div class="subject-stats">
-                        <div class="stat">
-                            <div class="stat-value">{{ subject.average }}</div>
-                            <div class="stat-label">Media</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-value">{{ subject.grade_count }}</div>
-                            <div class="stat-label">Voti</div>
-                        </div>
+            <!-- Form Aggiungi Voto -->
+            <form action="{{ url_for('add_grade') }}" method="POST">
+                <input type="hidden" name="subject_id" value="{{ subject.id }}">
+                <div class="add-grade-form">
+                    <input type="number" step="0.1" min="0" max="10" name="value" placeholder="Voto" required>
+                    <input type="number" step="0.1" min="0.1" name="weight" placeholder="Peso" value="1.0" required>
+                    <button type="submit">+</button>
+                </div>
+            </form>
+            
+            <!-- Lista Voti -->
+            <div class="grades-list">
+                {% for grade in subject.grades|sort(attribute='date', reverse=true) %}
+                <div class="grade-item">
+                    <span class="grade-value">{{ grade.value }} (x{{ grade.weight }})</span>
+                    <div>
+                        <span class="grade-date">{{ grade.date.strftime('%d/%m') }}</span>
+                        <a href="{{ url_for('delete_grade', grade_id=grade.id) }}" class="delete-btn">
+                            <i class="fas fa-trash"></i>
+                        </a>
                     </div>
-                    <a href="{{ url_for('view_subject', subject_id=subject.id) }}">Gestisci voti</a>
                 </div>
                 {% else %}
-                <p>Nessuna materia registrata</p>
+                <p style="text-align: center; margin-top: 1rem;">Nessun voto registrato</p>
                 {% endfor %}
             </div>
             
-            <form class="add-form" method="POST" action="{{ url_for('add_subject') }}">
-                <input type="text" name="name" placeholder="Nome nuova materia" required>
-                <button type="submit">Aggiungi Materia</button>
-            </form>
+            <a href="{{ url_for('subject', id=subject.id) }}" style="display: block; text-align: center; margin-top: 1rem;">
+                <i class="fas fa-chart-line"></i> Dettagli
+            </a>
         </div>
+        {% else %}
+        <div class="subject-card">
+            <h3 style="text-align: center;">Nessuna materia registrata</h3>
+            <p style="text-align: center; margin-top: 1rem;">Aggiungi una materia per iniziare</p>
+        </div>
+        {% endfor %}
     </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        // Grafico a stella (radar)
-        const radarCtx = document.getElementById('radarChart').getContext('2d');
-        const radarChart = new Chart(radarCtx, {
-            type: 'radar',
-            data: {
-                labels: JSON.parse('{{ radar_labels | safe }}'),
-                datasets: [{
-                    label: 'Media Voti',
-                    data: JSON.parse('{{ radar_data | safe }}'),
-                    fill: true,
-                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                    borderColor: 'rgb(54, 162, 235)',
-                    pointBackgroundColor: 'rgb(54, 162, 235)',
-                    pointBorderColor: '#fff',
-                    pointHoverBackgroundColor: '#fff',
-                    pointHoverBorderColor: 'rgb(54, 162, 235)'
-                }]
-            },
-            options: {
-                scales: {
-                    r: {
-                        min: 0,
-                        max: 10,
-                        ticks: {
-                            stepSize: 1,
-                            showLabelBackdrop: false
-                        },
-                        pointLabels: {
-                            font: {
-                                size: 12,
-                                weight: 'bold'
-                            }
-                        },
-                        angleLines: {
-                            color: 'rgba(0, 0, 0, 0.1)'
-                        },
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.1)'
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        position: 'top',
-                        labels: {
-                            font: {
-                                size: 14
-                            }
+<script>
+    // Configurazione Radar Semplificato
+    const radarCtx = document.getElementById('radarChart').getContext('2d');
+    new Chart(radarCtx, {
+        type: 'radar',
+        data: {
+            labels: {{ subjects|map(attribute='name')|tojson }},
+            datasets: [{
+                label: 'Media',
+                data: {{ subjects|map(attribute='avg')|tojson }},
+                backgroundColor: 'rgba(37, 117, 252, 0.2)',
+                borderColor: '#2575fc',
+                borderWidth: 2,
+                pointBackgroundColor: '#2575fc',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: '#2575fc'
+            }]
+        },
+        options: {
+            scales: {
+                r: {
+                    angleLines: {
+                        display: true,
+                        color: 'rgba(200, 200, 200, 0.3)'
+                    },
+                    suggestedMin: 0,
+                    suggestedMax: 10,
+                    ticks: {
+                        stepSize: 2,
+                        showLabelBackdrop: false,
+                        callback: function(value) {
+                            return value === 10 ? '10' : '';
                         }
                     },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return `Media: ${context.formattedValue}`;
-                            }
+                    pointLabels: {
+                        font: {
+                            size: 11
+                        },
+                        color: 'var(--text-color)'
+                    },
+                    grid: {
+                        color: 'var(--border-color)'
+                    }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `Media: ${context.raw}`;
                         }
                     }
-                },
-                layout: {
-                    padding: 20
-                },
-                maintainAspectRatio: false
-            }
-        });
-    </script>
-</body>
-</html>
+                }
+            },
+            maintainAspectRatio: false,
+            responsive: true
+        }
+    });
+</script>
+{% endblock %}
