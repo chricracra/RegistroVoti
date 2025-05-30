@@ -2,6 +2,7 @@ from flask import Flask, render_template, redirect, url_for, request, jsonify, f
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_wtf.csrf import CSRFProtect
+from flask_migrate import Migrate  # Aggiungi questa importazione
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 from datetime import datetime
@@ -16,6 +17,10 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message = "Effettua l'accesso per accedere a questa pagina"
 login_manager.login_message_category = "info"
+
+# Aggiungi questa riga per Flask-Migrate
+migrate = Migrate(app, db)
+
 
 # Configurazione CSRF corretta
 csrf = CSRFProtect()
