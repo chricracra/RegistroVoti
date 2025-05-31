@@ -65,7 +65,7 @@
         }
         .chart-container {
             position: relative;
-            height: 250px;
+            height: 250px;  /* Altezza corretta per il grafico */
             width: 100%;
         }
         
@@ -224,49 +224,6 @@
                 font-size: 2em;
             }
         }
-                /* Tema scuro */
-        body.dark-theme {
-            background-color: #121212;
-            color: #e0e0e0;
-        }
-        
-        body.dark-theme .stats-card,
-        body.dark-theme .card,
-        body.dark-theme .radar-card,
-        body.dark-theme .subject-card {
-            background-color: #1e1e1e;
-            color: #e0e0e0;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }
-        
-        body.dark-theme .subject-card a {
-            background-color: #2c2c2c;
-            color: #64b5f6;
-        }
-        
-        body.dark-theme .overall-avg-badge {
-            background-color: #0d47a1;
-            color: #bbdefb;
-            border-color: #64b5f6;
-        }
-        
-        body.dark-theme .dropdown-menu {
-            background-color: #1e1e1e;
-            color: #e0e0e0;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
-        }
-        
-        body.dark-theme .dropdown-item {
-            border-bottom: 1px solid #333;
-        }
-        
-        body.dark-theme .dropdown-item:hover {
-            background-color: #2c2c2c;
-        }
-        
-        body.dark-theme .dropdown-item a {
-            color: #e0e0e0;
-        }
     </style>
 </head>
 <body>
@@ -342,104 +299,110 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // Grafico a stella (radar)
-        const radarCtx = document.getElementById('radarChart').getContext('2d');
-        const radarChart = new Chart(radarCtx, {
-            type: 'radar',
-            data: {
-                labels: JSON.parse('{{ radar_labels | safe }}'),
-                datasets: [{
-                    label: 'Media Materia',
-                    data: JSON.parse('{{ radar_data | safe }}'),
-                    fill: true,
-                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                    borderColor: 'rgb(54, 162, 235)',
-                    pointBackgroundColor: 'rgb(54, 162, 235)',
-                    pointBorderColor: '#fff',
-                    pointHoverBackgroundColor: '#fff',
-                    pointHoverBorderColor: 'rgb(54, 162, 235)'
-                }]
-            },
-            options: {
-                scales: {
-                    r: {
-                        min: 0,
-                        max: 10,
-                        ticks: {
-                            stepSize: 2,
-                            callback: function(value) {
-                                return value % 2 === 0 ? value : '';
+        // Grafico a stella (radar) - solo se ci sono materie
+        const radarCtx = document.getElementById('radarChart');
+        if (radarCtx) {
+            const radarChart = new Chart(radarCtx, {
+                type: 'radar',
+                data: {
+                    labels: JSON.parse('{{ radar_labels | safe }}'),
+                    datasets: [{
+                        label: 'Media Materia',
+                        data: JSON.parse('{{ radar_data | safe }}'),
+                        fill: true,
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgb(54, 162, 235)',
+                        pointBackgroundColor: 'rgb(54, 162, 235)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgb(54, 162, 235)'
+                    }]
+                },
+                options: {
+                    scales: {
+                        r: {
+                            min: 0,
+                            max: 10,
+                            ticks: {
+                                stepSize: 2,
+                                callback: function(value) {
+                                    return value % 2 === 0 ? value : '';
+                                },
+                                backdropColor: 'transparent',
+                                font: {
+                                    size: 10
+                                }
                             },
-                            backdropColor: 'transparent',
-                            font: {
-                                size: 10
-                            }
-                        },
-                        grid: {
-                            color: 'rgba(0,0,0,0.1)'
-                        },
-                        angleLines: {
-                            color: 'rgba(0,0,0,0.1)'
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    title: {
-                        display: false
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return `Media: ${context.formattedValue}`;
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            },
+                            angleLines: {
+                                color: 'rgba(0,0,0,0.1)'
                             }
                         }
-                    }
-                },
-                elements: {
-                    point: {
-                        radius: 3
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Media: ${context.formattedValue}`;
+                                }
+                            }
+                        }
+                    },
+                    elements: {
+                        point: {
+                            radius: 3
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
 
-        // Gestione avatar e dropdown menu
+        // Gestione avatar e dropdown menu - CORRETTA
         const avatar = document.getElementById('userAvatar');
         const dropdown = document.getElementById('userDropdown');
         
-        avatar.addEventListener('click', function(e) {
-            e.stopPropagation();
-            dropdown.classList.toggle('show');
-        });
-        
-        // Chiudi il menu quando si clicca fuori
-        document.addEventListener('click', function(e) {
-            if (!avatar.contains(e.target) {
-                dropdown.classList.remove('show');
-            }
-        });
-        
+        if (avatar && dropdown) {
+            avatar.addEventListener('click', function(e) {
+                e.stopPropagation();
+                dropdown.classList.toggle('show');
+            });
+            
+            // Chiudi il menu quando si clicca fuori
+            document.addEventListener('click', function(e) {
+                if (!avatar.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.classList.remove('show');
+                }
+            });
+        }
+
         // Gestione cambio tema
         const themeToggle = document.getElementById('themeToggle');
-        const currentTheme = localStorage.getItem('theme') || 'light';
-        
-        if (currentTheme === 'dark') {
-            document.body.classList.add('dark-theme');
-            themeToggle.checked = true;
-        }
-        
-        themeToggle.addEventListener('change', function() {
-            if (this.checked) {
+        if (themeToggle) {
+            const currentTheme = localStorage.getItem('theme') || 'light';
+            
+            if (currentTheme === 'dark') {
                 document.body.classList.add('dark-theme');
-                localStorage.setItem('theme', 'dark');
-            } else {
-                document.body.classList.remove('dark-theme');
-                localStorage.setItem('theme', 'light');
+                themeToggle.checked = true;
             }
-        });
+            
+            themeToggle.addEventListener('change', function() {
+                if (this.checked) {
+                    document.body.classList.add('dark-theme');
+                    localStorage.setItem('theme', 'dark');
+                } else {
+                    document.body.classList.remove('dark-theme');
+                    localStorage.setItem('theme', 'light');
+                }
+            });
+        }
     </script>
 </body>
 </html>
