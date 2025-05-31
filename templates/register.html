@@ -3,125 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ subject.name }} - Registro Voti</title>
+    <title>Registrazione - Registro Voti</title>
     <style>
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-        body { max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f5f5f7; color: #333; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .back-link { color: #2575fc; text-decoration: none; display: flex; align-items: center; gap: 5px; }
-        .subject-header { background: white; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
-        .subject-title { margin: 0; color: #2c3e50; }
-        .subject-avg { font-size: 1.8em; font-weight: 700; color: #ff6b6b; }
-        .card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .grade-item { display: flex; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid #eee; align-items: center; }
-        .grade-value { font-size: 1.3em; font-weight: 600; }
-        .grade-weight { color: #7f8c8d; }
-        .grade-date { color: #7f8c8d; font-size: 0.9em; }
-        .delete-btn { background: #ff6b6b; color: white; border: none; border-radius: 6px; padding: 5px 10px; cursor: pointer; }
-        .add-grade-form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; margin-top: 20px; }
-        input, button { padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
-        button { background: #2575fc; color: white; border: none; cursor: pointer; font-weight: 500; }
-        .delete-subject-btn { background: #ff6b6b; width: 100%; margin-top: 20px; }
-        .chart-container {
-            position: relative;
-            height: 300px;
-            width: 100%;
-            margin-top: 20px;
-        }
-        @media (max-width: 600px) {
-            .add-grade-form { grid-template-columns: 1fr; }
-            .chart-container {
-                height: 250px;
-            }
-        }
+        body { background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%); height: 100vh; display: flex; justify-content: center; align-items: center; margin: 0; }
+        .register-container { background: white; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 90%; max-width: 400px; padding: 30px; }
+        .logo { text-align: center; margin-bottom: 25px; }
+        h1 { color: #2c3e50; font-weight: 600; text-align: center; margin-top: 0; }
+        .form-group { margin-bottom: 20px; }
+        input { width: 100%; padding: 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
+        button { width: 100%; padding: 14px; background: #2575fc; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.3s; }
+        button:hover { background: #1a68e8; }
+        .links { text-align: center; margin-top: 20px; }
+        .links a { color: #2575fc; text-decoration: none; }
+        .alert { padding: 10px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
+        .error { background: #ffebee; color: #c62828; }
+        .success { background: #e8f5e9; color: #2e7d32; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <a href="{{ url_for('dashboard') }}" class="back-link">← Torna alla dashboard</a>
-    </div>
-    
-    <div class="subject-header">
-        <h1 class="subject-title">{{ subject.name }}</h1>
-        <div class="subject-avg">Media: {{ average }}</div>
-    </div>
-    
-    <div class="card">
-        <h2>Voti registrati</h2>
+    <div class="register-container">
+        <div class="logo">
+            <h1>📚 Registro Voti</h1>
+        </div>
         
-        {% if subject.grades %}
-            {% for grade in subject.grades %}
-            <div class="grade-item">
-                <div>
-                    <span class="grade-value">{{ grade.value }}</span>
-                    <span class="grade-weight">(Peso: {{ grade.weight }})</span>
-                    <div class="grade-date">{{ grade.date.strftime('%d/%m/%Y') }}</div>
-                </div>
-                <form method="POST" action="{{ url_for('delete_grade', grade_id=grade.id) }}">
-                    <button type="submit" class="delete-btn">Elimina</button>
-                </form>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <form method="POST" action="{{ url_for('register') }}">
+            <div class="form-group">
+                <input type="text" name="username" placeholder="Username" required>
             </div>
-            {% endfor %}
-        {% else %}
-            <p>Nessun voto registrato per questa materia</p>
-        {% endif %}
-        
-        <form class="add-grade-form" method="POST" action="{{ url_for('add_grade', subject_id=subject.id) }}">
-            <input type="number" name="value" min="1" max="10" step="0.1" placeholder="Voto (1-10)" required>
-            <input type="number" name="weight" min="1" max="10" value="1" placeholder="Peso" required>
-            <button type="submit">Aggiungi Voto</button>
+            <div class="form-group">
+                <input type="password" name="password" placeholder="Password" required>
+            </div>
+            <button type="submit">Registrati</button>
         </form>
-    </div>
-    
-    <!-- Grafico andamento voti -->
-    <div class="card">
-        <h2>📈 Andamento Voti</h2>
-        <div class="chart-container">
-            <canvas id="trendChart"></canvas>
+        
+        <div class="links">
+            <p>Hai già un account? <a href="{{ url_for('login') }}">Accedi</a></p>
         </div>
     </div>
-    
-    <form method="POST" action="{{ url_for('delete_subject', subject_id=subject.id) }}">
-        <button type="submit" class="delete-subject-btn">Elimina Materia</button>
-    </form>
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        // Grafico di andamento
-        const trendCtx = document.getElementById('trendChart').getContext('2d');
-        const trendChart = new Chart(trendCtx, {
-            type: 'line',
-            data: {
-                labels: JSON.parse('{{ chart_dates | safe }}'),
-                datasets: [{
-                    label: 'Voto',
-                    data: JSON.parse('{{ chart_values | safe }}'),
-                    fill: false,
-                    borderColor: 'rgb(75, 192, 192)',
-                    tension: 0.1
-                }]
-            },
-            options: {
-                scales: {
-                    y: {
-                        min: 0,
-                        max: 10,
-                        ticks: {
-                            stepSize: 1
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        position: 'top',
-                    },
-                    title: {
-                        display: true,
-                        text: 'Andamento Voti nel Tempo'
-                    }
-                }
-            }
-        });
-    </script>
 </body>
 </html>
