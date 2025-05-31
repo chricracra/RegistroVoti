@@ -21,7 +21,7 @@
         .success { background: #e8f5e9; color: #2e7d32; }
     </style>
 </head>
-<body>
+<body class="{% if session.get('theme') == 'dark' %}dark-theme{% endif %}">
     <div class="login-container">
         <div class="logo">
             <h1>📚 Registro Voti</h1>
