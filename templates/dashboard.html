@@ -413,44 +413,56 @@
             });
         }
 
-        // Gestione avatar e dropdown menu - CORRETTA
-        const avatar = document.getElementById('userAvatar');
-        const dropdown = document.getElementById('userDropdown');
+        // Gestione avatar e dropdown menu
+    const avatar = document.getElementById('userAvatar');
+    const dropdown = document.getElementById('userDropdown');
+    
+    if (avatar && dropdown) {
+        avatar.addEventListener('click', function(e) {
+            e.stopPropagation();
+            dropdown.classList.toggle('show');
+        });
         
-        if (avatar && dropdown) {
-            avatar.addEventListener('click', function(e) {
-                e.stopPropagation();
-                dropdown.classList.toggle('show');
-            });
-            
-            // Chiudi il menu quando si clicca fuori
-            document.addEventListener('click', function(e) {
-                if (!avatar.contains(e.target) && !dropdown.contains(e.target)) {
-                    dropdown.classList.remove('show');
-                }
-            });
-        }
-
-        // Gestione cambio tema
-        const themeToggle = document.getElementById('themeToggle');
-        if (themeToggle) {
-            const currentTheme = localStorage.getItem('theme') || 'light';
-            
-            if (currentTheme === 'dark') {
-                document.body.classList.add('dark-theme');
-                themeToggle.checked = true;
+        // Chiudi il menu quando si clicca fuori
+        document.addEventListener('click', function(e) {
+            if (!avatar.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.classList.remove('show');
             }
+        });
+    }
+
+    // Gestione cambio tema
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) {
+        // Imposta lo stato iniziale del toggle
+        themeToggle.checked = "{{ session.get('theme', 'light') }}" === 'dark';
+        
+        themeToggle.addEventListener('change', function() {
+            const newTheme = this.checked ? 'dark' : 'light';
             
-            themeToggle.addEventListener('change', function() {
-                if (this.checked) {
-                    document.body.classList.add('dark-theme');
-                    localStorage.setItem('theme', 'dark');
+            // Invia la richiesta al server
+            fetch('/change_theme', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ theme: newTheme })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.body.classList.toggle('dark-theme', newTheme === 'dark');
                 } else {
-                    document.body.classList.remove('dark-theme');
-                    localStorage.setItem('theme', 'light');
+                    // Ripristina lo stato in caso di errore
+                    themeToggle.checked = !this.checked;
                 }
+            })
+            .catch(error => {
+                console.error('Errore:', error);
+                themeToggle.checked = !this.checked;
             });
-        }
+        });
+    }
     </script>
 </body>
 </html>
