@@ -98,45 +98,55 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // Grafico a stella (radar)
-        const radarCtx = document.getElementById('radarChart').getContext('2d');
-        const radarChart = new Chart(radarCtx, {
-            type: 'radar',
-            data: {
-                labels: JSON.parse('{{ radar_labels | safe }}'),
-                datasets: [{
-                    label: 'Completezza (%)',
-                    data: JSON.parse('{{ radar_data | safe }}'),
-                    fill: true,
-                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                    borderColor: 'rgb(54, 162, 235)',
-                    pointBackgroundColor: 'rgb(54, 162, 235)',
-                    pointBorderColor: '#fff',
-                    pointHoverBackgroundColor: '#fff',
-                    pointHoverBorderColor: 'rgb(54, 162, 235)'
-                }]
-            },
-            options: {
-                scales: {
-                    r: {
-                        min: 0,
-                        max: 100,
-                        ticks: {
-                            stepSize: 20
+    // Grafico a stella (radar)
+    const radarCtx = document.getElementById('radarChart').getContext('2d');
+    const radarChart = new Chart(radarCtx, {
+        type: 'radar',
+        data: {
+            labels: JSON.parse('{{ radar_labels | safe }}'),
+            datasets: [{
+                label: 'Media Materia',
+                data: JSON.parse('{{ radar_data | safe }}'),
+                fill: true,
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderColor: 'rgb(54, 162, 235)',
+                pointBackgroundColor: 'rgb(54, 162, 235)',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: 'rgb(54, 162, 235)'
+            }]
+        },
+        options: {
+            scales: {
+                r: {
+                    min: 0,
+                    max: 10,
+                    ticks: {
+                        stepSize: 2,  // Mostra solo numeri pari
+                        callback: function(value) {
+                            return value % 2 === 0 ? value : ''; // Mostra solo numeri pari
                         }
                     }
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
                 },
-                plugins: {
-                    legend: {
-                        position: 'top',
-                    },
-                    title: {
-                        display: true,
-                        text: 'Livello di Completezza per Materia'
+                title: {
+                    display: true,
+                    text: 'Media per Materia'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `Media: ${context.formattedValue}`;
+                        }
                     }
                 }
             }
-        });
-    </script>
+        }
+    });
+</script>
 </body>
 </html>
