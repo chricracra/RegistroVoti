@@ -15,22 +15,6 @@
         .stats-card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: center; }
         .overall-avg { font-size: 2.5em; font-weight: 700; color: #2575fc; margin: 10px 0; }
         .card-title { font-size: 1.2em; color: #7f8c8d; margin: 0; }
-        
-        /* Grafico */
-        .chart-container {
-            position: relative;
-            height: 300px;
-            width: 100%;
-            margin: 20px 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        
-        /* Card materie */
-        .subjects-container {
-            margin-top: 30px;
-        }
         .card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .subject-name { font-size: 1.3em; font-weight: 600; color: #2c3e50; }
@@ -42,39 +26,22 @@
         button { background: #2575fc; color: white; border: none; cursor: pointer; font-weight: 500; }
         .delete-btn { background: #ff6b6b; }
         .subjects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
-        
-        /* Card materia */
-        .subject-card { 
-            background: white; 
-            border-radius: 16px; 
-            padding: 20px; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
-            transition: transform 0.3s, box-shadow 0.3s; 
-            border-left: 4px solid #4a6fa5; 
+        .subject-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: transform 0.2s; border-left: 4px solid #2575fc; }
+        .subject-card:hover { transform: translateY(-5px); }
+        .subject-card h3 { margin-top: 0; color: #2c3e50; }
+        .subject-card a { display: block; text-align: center; background: #f1f8ff; color: #2575fc; padding: 10px; border-radius: 8px; text-decoration: none; margin-top: 15px; }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+            margin-top: 20px;
         }
-        .subject-card:hover { transform: translateY(-5px); box-shadow: 0 6px 15px rgba(0,0,0,0.1); }
-        .subject-card h3 { margin-top: 0; color: #2c3e50; margin-bottom: 10px; }
-        .subject-stats { display: flex; gap: 15px; margin: 15px 0; }
-        .stat { background: #f8f9fa; border-radius: 8px; padding: 10px; text-align: center; flex: 1; }
-        .stat-value { font-size: 1.4em; font-weight: 700; color: #2575fc; }
-        .stat-label { font-size: 0.9em; color: #7f8c8d; }
-        .subject-card a { 
-            display: block; 
-            text-align: center; 
-            background: #eef7ff; 
-            color: #2575fc; 
-            padding: 12px; 
-            border-radius: 8px; 
-            text-decoration: none; 
-            font-weight: 600; 
-            transition: background 0.3s; 
-        }
-        .subject-card a:hover { background: #d4e7ff; }
-        
         @media (max-width: 600px) {
             .add-form { grid-template-columns: 1fr; }
             .subjects-grid { grid-template-columns: 1fr; }
-            .chart-container { height: 250px; }
+            .chart-container {
+                height: 250px;
+            }
         }
     </style>
 </head>
@@ -96,46 +63,36 @@
         <div class="overall-avg">{{ overall_avg }}</div>
     </div>
 
-    <!-- Grafico a stella per le medie -->
     <div class="card">
-        <h2>📊 Media per Materia</h2>
-        <div class="chart-container">
-            <canvas id="radarChart"></canvas>
+        <div class="card-header">
+            <h2>Le tue materie</h2>
         </div>
+        
+        <div class="subjects-grid">
+            {% for subject in subjects %}
+            <div class="subject-card">
+                <h3>{{ subject.name }}</h3>
+                <p>Media: {{ subject.average }}</p>
+                <p>Voti: {{ subject.grade_count }}</p>
+                <p>Completezza: {{ subject.completion }}%</p>
+                <a href="{{ url_for('view_subject', subject_id=subject.id) }}">Gestisci voti</a>
+            </div>
+            {% else %}
+            <p>Nessuna materia registrata</p>
+            {% endfor %}
+        </div>
+        
+        <form class="add-form" method="POST" action="{{ url_for('add_subject') }}">
+            <input type="text" name="name" placeholder="Nome nuova materia" required>
+            <button type="submit">Aggiungi Materia</button>
+        </form>
     </div>
 
-    <!-- Sezione materie -->
-    <div class="subjects-container">
-        <div class="card">
-            <div class="card-header">
-                <h2>Le tue materie</h2>
-            </div>
-            
-            <div class="subjects-grid">
-                {% for subject in subjects %}
-                <div class="subject-card">
-                    <h3>{{ subject.name }}</h3>
-                    <div class="subject-stats">
-                        <div class="stat">
-                            <div class="stat-value">{{ subject.average }}</div>
-                            <div class="stat-label">Media</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-value">{{ subject.grade_count }}</div>
-                            <div class="stat-label">Voti</div>
-                        </div>
-                    </div>
-                    <a href="{{ url_for('view_subject', subject_id=subject.id) }}">Gestisci voti</a>
-                </div>
-                {% else %}
-                <p>Nessuna materia registrata</p>
-                {% endfor %}
-            </div>
-            
-            <form class="add-form" method="POST" action="{{ url_for('add_subject') }}">
-                <input type="text" name="name" placeholder="Nome nuova materia" required>
-                <button type="submit">Aggiungi Materia</button>
-            </form>
+    <!-- Grafico a stella per completezza -->
+    <div class="card">
+        <h2>📊 Completezza Materie</h2>
+        <div class="chart-container">
+            <canvas id="radarChart"></canvas>
         </div>
     </div>
 
@@ -148,7 +105,7 @@
             data: {
                 labels: JSON.parse('{{ radar_labels | safe }}'),
                 datasets: [{
-                    label: 'Media Voti',
+                    label: 'Completezza (%)',
                     data: JSON.parse('{{ radar_data | safe }}'),
                     fill: true,
                     backgroundColor: 'rgba(54, 162, 235, 0.2)',
@@ -163,46 +120,21 @@
                 scales: {
                     r: {
                         min: 0,
-                        max: 10,
+                        max: 100,
                         ticks: {
-                            stepSize: 1,
-                            showLabelBackdrop: false
-                        },
-                        pointLabels: {
-                            font: {
-                                size: 12,
-                                weight: 'bold'
-                            }
-                        },
-                        angleLines: {
-                            color: 'rgba(0, 0, 0, 0.1)'
-                        },
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.1)'
+                            stepSize: 20
                         }
                     }
                 },
                 plugins: {
                     legend: {
                         position: 'top',
-                        labels: {
-                            font: {
-                                size: 14
-                            }
-                        }
                     },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return `Media: ${context.formattedValue}`;
-                            }
-                        }
+                    title: {
+                        display: true,
+                        text: 'Livello di Completezza per Materia'
                     }
-                },
-                layout: {
-                    padding: 20
-                },
-                maintainAspectRatio: false
+                }
             }
         });
     </script>
