@@ -68,45 +68,18 @@ class Grade(db.Model):
 def initialize_database():
     with app.app_context():
         try:
-            # Verifica se le tabelle esistono già
+            # Controlla se le tabelle esistono già
             inspector = inspect(db.engine)
             existing_tables = inspector.get_table_names()
             required_tables = {'users', 'subjects', 'grades'}
             
-            # Crea le tabelle mancanti
-            for table in required_tables:
-                if table not in existing_tables:
-                    print(f"Creazione tabella: {table}")
-                    
-                    if table == 'users':
-                        db.session.execute(text("""
-                            CREATE TABLE users (
-                                id SERIAL PRIMARY KEY,
-                                username VARCHAR(80) UNIQUE NOT NULL,
-                                password VARCHAR(120) NOT NULL
-                            )
-                        """))
-                    elif table == 'subjects':
-                        db.session.execute(text("""
-                            CREATE TABLE subjects (
-                                id SERIAL PRIMARY KEY,
-                                name VARCHAR(100) NOT NULL,
-                                user_id INTEGER NOT NULL
-                            )
-                        """))
-                    elif table == 'grades':
-                        db.session.execute(text("""
-                            CREATE TABLE grades (
-                                id SERIAL PRIMARY KEY,
-                                value FLOAT NOT NULL,
-                                weight FLOAT NOT NULL DEFAULT 1.0,
-                                date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                                subject_id INTEGER NOT NULL
-                            )
-                        """))
-                    
-                    db.session.commit()
-                    print(f"Tabella {table} creata con successo")
+            # Crea le tabelle mancanti usando SQLAlchemy
+            if not required_tables.issubset(set(existing_tables)):
+                print("Creazione tabelle mancanti...")
+                db.create_all()
+                print("Tabelle create con successo")
+            else:
+                print("Tutte le tabelle esistono già")
             
             print("Verifica database completata")
             return True
