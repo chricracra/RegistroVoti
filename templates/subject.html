@@ -85,7 +85,7 @@
         }
     </style>
 </head>
-<body>
+<body class="{% if session.get('theme') == 'dark' %}dark-theme{% endif %}">
     <div class="header">
         <a href="{{ url_for('dashboard') }}" class="back-link">← Torna alla dashboard</a>
     </div>
