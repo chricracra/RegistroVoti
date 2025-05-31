@@ -11,7 +11,6 @@
         .user-info { display: flex; align-items: center; gap: 10px; }
         .welcome { font-size: 18px; font-weight: 500; }
         .username { color: #2575fc; font-weight: 600; }
-        .logout-btn { background: #ff6b6b; color: white; border: none; border-radius: 6px; padding: 8px 15px; cursor: pointer; }
         
         /* Nuovo layout top section */
         .top-section {
@@ -87,6 +86,132 @@
         .subject-card h3 { margin-top: 0; color: #2c3e50; }
         .subject-card a { display: block; text-align: center; background: #f1f8ff; color: #2575fc; padding: 10px; border-radius: 8px; text-decoration: none; margin-top: 15px; }
         
+        /* Avatar e dropdown menu */
+        .avatar-container {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #2575fc;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 18px;
+            transition: all 0.3s;
+        }
+        
+        .avatar:hover {
+            background-color: #1a68e8;
+            transform: scale(1.05);
+        }
+        
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 45px;
+            background-color: white;
+            min-width: 200px;
+            border-radius: 8px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            z-index: 100;
+            overflow: hidden;
+        }
+        
+        .dropdown-menu.show {
+            display: block;
+        }
+        
+        .dropdown-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background 0.2s;
+        }
+        
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+        
+        .dropdown-item:hover {
+            background-color: #f9f9f9;
+        }
+        
+        .dropdown-item a {
+            text-decoration: none;
+            color: #333;
+            width: 100%;
+            display: block;
+        }
+        
+        /* Toggle switch per tema scuro */
+        .theme-switch {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+        
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+        }
+        
+        input:checked + .slider {
+            background-color: #2575fc;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        .slider.round {
+            border-radius: 24px;
+        }
+        
+        .slider.round:before {
+            border-radius: 50%;
+        }
+        
         /* Responsive */
         @media (max-width: 768px) {
             .top-section {
@@ -99,6 +224,49 @@
                 font-size: 2em;
             }
         }
+                /* Tema scuro */
+        body.dark-theme {
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+        
+        body.dark-theme .stats-card,
+        body.dark-theme .card,
+        body.dark-theme .radar-card,
+        body.dark-theme .subject-card {
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        body.dark-theme .subject-card a {
+            background-color: #2c2c2c;
+            color: #64b5f6;
+        }
+        
+        body.dark-theme .overall-avg-badge {
+            background-color: #0d47a1;
+            color: #bbdefb;
+            border-color: #64b5f6;
+        }
+        
+        body.dark-theme .dropdown-menu {
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        }
+        
+        body.dark-theme .dropdown-item {
+            border-bottom: 1px solid #333;
+        }
+        
+        body.dark-theme .dropdown-item:hover {
+            background-color: #2c2c2c;
+        }
+        
+        body.dark-theme .dropdown-item a {
+            color: #e0e0e0;
+        }
     </style>
 </head>
 <body>
@@ -108,9 +276,25 @@
         </div>
         <div class="user-info">
             <div class="welcome">Ciao <span class="username">{{ username }}</span></div>
-            <a href="{{ url_for('logout') }}">
-                <button class="logout-btn">Esci</button>
-            </a>
+            <div class="avatar-container">
+                <div class="avatar" id="userAvatar">
+                    {{ username[0]|upper }}
+                </div>
+                <div class="dropdown-menu" id="userDropdown">
+                    <div class="dropdown-item">
+                        <div class="theme-switch">
+                            <span>Modalità Scura</span>
+                            <label class="switch">
+                                <input type="checkbox" id="themeToggle">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="dropdown-item">
+                        <a href="{{ url_for('logout') }}">Esci dall'account</a>
+                    </div>
+                </div>
+            </div>
         </div>
     </header>
 
@@ -219,6 +403,41 @@
                         radius: 3
                     }
                 }
+            }
+        });
+
+        // Gestione avatar e dropdown menu
+        const avatar = document.getElementById('userAvatar');
+        const dropdown = document.getElementById('userDropdown');
+        
+        avatar.addEventListener('click', function(e) {
+            e.stopPropagation();
+            dropdown.classList.toggle('show');
+        });
+        
+        // Chiudi il menu quando si clicca fuori
+        document.addEventListener('click', function(e) {
+            if (!avatar.contains(e.target) {
+                dropdown.classList.remove('show');
+            }
+        });
+        
+        // Gestione cambio tema
+        const themeToggle = document.getElementById('themeToggle');
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        
+        if (currentTheme === 'dark') {
+            document.body.classList.add('dark-theme');
+            themeToggle.checked = true;
+        }
+        
+        themeToggle.addEventListener('change', function() {
+            if (this.checked) {
+                document.body.classList.add('dark-theme');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.body.classList.remove('dark-theme');
+                localStorage.setItem('theme', 'light');
             }
         });
     </script>
