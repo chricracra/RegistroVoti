@@ -84,14 +84,27 @@ def initialize_database():
                             CREATE TABLE users (
                                 id SERIAL PRIMARY KEY,
                                 username VARCHAR(80) UNIQUE NOT NULL,
-                                password VARCHAR(120) NOT NULL,
-                                theme VARCHAR(10) DEFAULT 'light'  -- Aggiungi questa colonna
+                                password VARCHAR(120) NOT NULL
                             )
                         """))
                     elif table == 'subjects':
-                        # ... (query esistente) ...
+                        db.session.execute(text("""
+                            CREATE TABLE subjects (
+                                id SERIAL PRIMARY KEY,
+                                name VARCHAR(100) NOT NULL,
+                                user_id INTEGER NOT NULL
+                            )
+                        """))
                     elif table == 'grades':
-                        # ... (query esistente) ...
+                        db.session.execute(text("""
+                            CREATE TABLE grades (
+                                id SERIAL PRIMARY KEY,
+                                value FLOAT NOT NULL,
+                                weight FLOAT NOT NULL DEFAULT 1.0,
+                                date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                subject_id INTEGER NOT NULL
+                            )
+                        """))
                     
                     db.session.commit()
                     print(f"Tabella {table} creata con successo")
