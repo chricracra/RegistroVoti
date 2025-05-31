@@ -83,19 +83,6 @@
             .grade-item { grid-template-columns: 1fr; }
             .chart-container { height: 250px; }
         }
-        .chart-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 300px;
-    margin-bottom: 30px;
-}
-
-.trend-chart-wrapper {
-    width: 100%;
-    max-width: 600px;
-    margin: 0 auto;
-}
     </style>
 </head>
 <body>
@@ -109,15 +96,12 @@
     </div>
     
     <!-- Grafico andamento voti -->
-    <!-- Modifica il contenuto del grafico così: -->
-<div class="card">
-    <h2>📈 Andamento Voti</h2>
-    <div class="chart-container">
-        <div class="trend-chart-wrapper">
+    <div class="card">
+        <h2>📈 Andamento Voti</h2>
+        <div class="chart-container">
             <canvas id="trendChart"></canvas>
         </div>
     </div>
-</div>
     
     <!-- Lista voti -->
     <div class="card grade-list-container">
