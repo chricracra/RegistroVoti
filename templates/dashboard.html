@@ -274,7 +274,7 @@
         }
     </style>
 </head>
-<body>
+<body class="{% if session.get('theme') == 'dark' %}dark-theme{% endif %}">
     <header>
         <div class="logo">
             <h1>📚 Registro Voti</h1>
