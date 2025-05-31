@@ -12,27 +12,76 @@
         .subject-header { background: white; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
         .subject-title { margin: 0; color: #2c3e50; }
         .subject-avg { font-size: 1.8em; font-weight: 700; color: #ff6b6b; }
+        
+        /* Grafico */
+        .chart-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 300px;
+            margin-bottom: 30px;
+        }
+        
+        /* Lista voti */
+        .grade-list-container {
+            margin-top: 30px;
+        }
         .card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .grade-item { display: flex; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid #eee; align-items: center; }
-        .grade-value { font-size: 1.3em; font-weight: 600; }
-        .grade-weight { color: #7f8c8d; }
-        .grade-date { color: #7f8c8d; font-size: 0.9em; }
-        .delete-btn { background: #ff6b6b; color: white; border: none; border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+        .grade-item {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 15px;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            align-items: center;
+        }
+        .grade-info {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 10px;
+            align-items: center;
+        }
+        .grade-value {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #ff6b6b;
+            min-width: 60px;
+            text-align: center;
+        }
+        .grade-details {
+            display: flex;
+            flex-direction: column;
+        }
+        .grade-weight {
+            background: #eef7ff;
+            color: #2575fc;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.9em;
+            align-self: flex-start;
+        }
+        .grade-date {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+        .delete-btn { 
+            background: #ff6b6b; 
+            color: white; 
+            border: none; 
+            border-radius: 6px; 
+            padding: 8px 15px; 
+            cursor: pointer; 
+            font-size: 14px;
+        }
         .add-grade-form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; margin-top: 20px; }
         input, button { padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
         button { background: #2575fc; color: white; border: none; cursor: pointer; font-weight: 500; }
         .delete-subject-btn { background: #ff6b6b; width: 100%; margin-top: 20px; }
-        .chart-container {
-            position: relative;
-            height: 300px;
-            width: 100%;
-            margin-top: 20px;
-        }
+        
         @media (max-width: 600px) {
             .add-grade-form { grid-template-columns: 1fr; }
-            .chart-container {
-                height: 250px;
-            }
+            .grade-item { grid-template-columns: 1fr; }
+            .chart-container { height: 250px; }
         }
     </style>
 </head>
@@ -46,16 +95,27 @@
         <div class="subject-avg">Media: {{ average }}</div>
     </div>
     
+    <!-- Grafico andamento voti -->
     <div class="card">
+        <h2>📈 Andamento Voti</h2>
+        <div class="chart-container">
+            <canvas id="trendChart"></canvas>
+        </div>
+    </div>
+    
+    <!-- Lista voti -->
+    <div class="card grade-list-container">
         <h2>Voti registrati</h2>
         
-        {% if subject.grades %}
-            {% for grade in subject.grades %}
+        {% if grades %}
+            {% for grade in grades %}
             <div class="grade-item">
-                <div>
-                    <span class="grade-value">{{ grade.value }}</span>
-                    <span class="grade-weight">(Peso: {{ grade.weight }})</span>
-                    <div class="grade-date">{{ grade.date.strftime('%d/%m/%Y') }}</div>
+                <div class="grade-info">
+                    <div class="grade-value">{{ grade.value }}</div>
+                    <div class="grade-details">
+                        <span class="grade-weight">Peso: {{ grade.weight }}</span>
+                        <span class="grade-date">{{ grade.date.strftime('%d/%m/%Y') }}</span>
+                    </div>
                 </div>
                 <form method="POST" action="{{ url_for('delete_grade', grade_id=grade.id) }}">
                     <button type="submit" class="delete-btn">Elimina</button>
@@ -71,14 +131,6 @@
             <input type="number" name="weight" min="1" max="10" value="1" placeholder="Peso" required>
             <button type="submit">Aggiungi Voto</button>
         </form>
-    </div>
-    
-    <!-- Grafico andamento voti -->
-    <div class="card">
-        <h2>📈 Andamento Voti</h2>
-        <div class="chart-container">
-            <canvas id="trendChart"></canvas>
-        </div>
     </div>
     
     <form method="POST" action="{{ url_for('delete_subject', subject_id=subject.id) }}">
@@ -98,26 +150,80 @@
                     data: JSON.parse('{{ chart_values | safe }}'),
                     fill: false,
                     borderColor: 'rgb(75, 192, 192)',
-                    tension: 0.1
+                    tension: 0.1,
+                    pointBackgroundColor: 'rgb(75, 192, 192)',
+                    pointRadius: 6,
+                    pointHoverRadius: 8
                 }]
             },
             options: {
+                responsive: true,
+                maintainAspectRatio: false,
                 scales: {
                     y: {
                         min: 0,
                         max: 10,
                         ticks: {
-                            stepSize: 1
+                            stepSize: 1,
+                            font: {
+                                size: 12
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Voto',
+                            font: {
+                                size: 14,
+                                weight: 'bold'
+                            }
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            font: {
+                                size: 12
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Data',
+                            font: {
+                                size: 14,
+                                weight: 'bold'
+                            }
                         }
                     }
                 },
                 plugins: {
                     legend: {
                         position: 'top',
+                        labels: {
+                            font: {
+                                size: 14
+                            }
+                        }
                     },
-                    title: {
-                        display: true,
-                        text: 'Andamento Voti nel Tempo'
+                    tooltip: {
+                        callbacks: {
+                            title: function(context) {
+                                return `Data: ${context[0].label}`;
+                            },
+                            label: function(context) {
+                                return `Voto: ${context.parsed.y}`;
+                            }
+                        }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                layout: {
+                    padding: {
+                        top: 20,
+                        right: 20,
+                        bottom: 20,
+                        left: 20
                     }
                 }
             }
