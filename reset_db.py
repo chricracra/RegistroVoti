@@ -1,6 +1,11 @@
 import os
 from app import app, db
 from models import User, Subject, Grade
+import sys
+from os.path import abspath, dirname
+
+# Aggiungi la directory principale al PYTHONPATH
+sys.path.insert(0, dirname(dirname(abspath(__file__))))
 
 def reset_database():
     with app.app_context():
