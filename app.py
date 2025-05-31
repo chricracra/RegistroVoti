@@ -226,10 +226,7 @@ def dashboard():
         
         # Prepara dati per il grafico radar
         radar_labels = [s.name for s in subjects]
-        radar_data = [min(100, len(db.session.execute(
-            text("SELECT id FROM grades WHERE subject_id = :subject_id"),
-            {'subject_id': s.id}
-        ).fetchall()) * 10) for s in subjects]
+        radar_data = [s['average'] for s in subjects_data]
         
         return render_template('dashboard.html',
                                subjects=subjects_data,
