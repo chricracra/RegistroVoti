@@ -43,12 +43,13 @@ app.permanent_session_lifetime = timedelta(days=30)
 
 db = SQLAlchemy(app)
 
-# Modelli semplificati
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
+    theme = db.Column(db.String(10), default='light')  # Aggiungi questo campo
+
 
 class Subject(db.Model):
     __tablename__ = 'subjects'
@@ -68,18 +69,43 @@ class Grade(db.Model):
 def initialize_database():
     with app.app_context():
         try:
-            # Controlla se le tabelle esistono già
+            # Verifica se le tabelle esistono già
             inspector = inspect(db.engine)
             existing_tables = inspector.get_table_names()
             required_tables = {'users', 'subjects', 'grades'}
             
-            # Crea le tabelle mancanti usando SQLAlchemy
-            if not required_tables.issubset(set(existing_tables)):
-                print("Creazione tabelle mancanti...")
-                db.create_all()
-                print("Tabelle create con successo")
-            else:
-                print("Tutte le tabelle esistono già")
+            # Crea le tabelle mancanti
+            for table in required_tables:
+                if table not in existing_tables:
+                    print(f"Creazione tabella: {table}")
+                    
+                    if table == 'users':
+                        db.session.execute(text("""
+                            CREATE TABLE users (
+                                id SERIAL PRIMARY KEY,
+                                username VARCHAR(80) UNIQUE NOT NULL,
+                                password VARCHAR(120) NOT NULL,
+                                theme VARCHAR(10) DEFAULT 'light'  -- Aggiungi questa colonna
+                            )
+                        """))
+                    elif table == 'subjects':
+                        # ... (query esistente) ...
+                    elif table == 'grades':
+                        # ... (query esistente) ...
+                    
+                    db.session.commit()
+                    print(f"Tabella {table} creata con successo")
+            
+            # Verifica se la colonna theme esiste nella tabella users
+            if 'users' in existing_tables:
+                columns = [col['name'] for col in inspector.get_columns('users')]
+                if 'theme' not in columns:
+                    print("Aggiunta colonna 'theme' alla tabella users")
+                    try:
+                        db.session.execute(text("ALTER TABLE users ADD COLUMN theme VARCHAR(10) DEFAULT 'light'"))
+                        db.session.commit()
+                    except Exception as e:
+                        print(f"Errore aggiunta colonna theme: {str(e)}")
             
             print("Verifica database completata")
             return True
@@ -141,9 +167,9 @@ def register():
             
             hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
             
-            # Crea nuovo utente
+            # Crea nuovo utente con tema predefinito
             db.session.execute(
-                text("INSERT INTO users (username, password) VALUES (:username, :password)"),
+                text("INSERT INTO users (username, password, theme) VALUES (:username, :password, 'light')"),  # Modifica questa query
                 {'username': username, 'password': hashed_password}
             )
             db.session.commit()
@@ -173,6 +199,7 @@ def login():
                 session.permanent = True
                 session['user_id'] = user.id
                 session['username'] = user.username
+                session['theme'] = user.theme  # Aggiungi questa linea
                 return redirect(url_for('dashboard'))
             else:
                 flash('Credenziali non valide!', 'error')
@@ -181,6 +208,33 @@ def login():
             flash(f'Errore durante il login: {str(e)}', 'error')
     
     return render_template('login.html')
+
+
+@app.route('/change_theme', methods=['POST'])
+def change_theme():
+    if 'user_id' not in session:
+        return jsonify({'success': False})
+    
+    theme = request.json.get('theme')
+    if theme not in ['light', 'dark']:
+        return jsonify({'success': False})
+    
+    try:
+        # Aggiorna il tema nel database
+        db.session.execute(
+            text("UPDATE users SET theme = :theme WHERE id = :user_id"),
+            {'theme': theme, 'user_id': session['user_id']}
+        )
+        db.session.commit()
+        
+        # Aggiorna la sessione
+        session['theme'] = theme
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Errore cambio tema: {str(e)}")
+        return jsonify({'success': False})
+
+
 
 @app.route('/logout')
 def logout():
