@@ -368,15 +368,27 @@ body.dark-theme .confirm-btn:hover {
                     {{ username[0]|upper }}
                 </div>
                 <div class="dropdown-menu" id="userDropdown">
-                    <div class="dropdown-item">
-                        <div class="theme-switch">
-                            <span>Modalità Scura</span>
-                            <label class="switch">
-                                <input type="checkbox" id="themeToggle">
-                                <span class="slider round"></span>
-                            </label>
-                        </div>
-                    </div>
+    <!-- Opzione tema scuro -->
+    <div class="dropdown-item">
+        <div class="theme-switch">
+            <span>Modalità Scura</span>
+            <label class="switch">
+                <input type="checkbox" id="themeToggle">
+                <span class="slider round"></span>
+            </label>
+        </div>
+    </div>
+    
+    <!-- Opzione logout -->
+    <div class="dropdown-item">
+        <a href="{{ url_for('logout') }}">Esci dall'account</a>
+    </div>
+    
+    <!-- AGGIUNGI QUI LA NUOVA OPZIONE -->
+    <div class="dropdown-item">
+        <a href="#" id="deleteAccountLink">Elimina Account</a>
+    </div>
+</div>
                     <div class="dropdown-item">
                         <a href="{{ url_for('logout') }}">Esci dall'account</a>
                     </div>
