@@ -321,29 +321,28 @@
     </div>
 
     <div class="card">
-        <div class="card-header">
-            <h2>Le tue materie</h2>
-        </div>
-        
-        <div class="subjects-grid">
-            {% for subject in subjects %}
-            <div class="subject-card">
-                <h3>{{ subject.name }}</h3>
-                <p>Media: {{ subject.average }}</p>
-                <p>Voti: {{ subject.grade_count }}</p>
-                <p>Completezza: {{ subject.completion }}%</p>
-                <a href="{{ url_for('view_subject', subject_id=subject.id) }}">Gestisci voti</a>
-            </div>
-            {% else %}
-            <p>Nessuna materia registrata</p>
-            {% endfor %}
-        </div>
-        
-        <form class="add-form" method="POST" action="{{ url_for('add_subject') }}">
-            <input type="text" name="name" placeholder="Nome nuova materia" required>
-            <button type="submit">Aggiungi Materia</button>
-        </form>
+    <div class="card-header">
+        <h2>Le tue materie</h2>
     </div>
+    
+    <div class="subjects-grid">
+        {% for subject in subjects %}
+        <div class="subject-card">
+            <h3>{{ subject.name }}</h3>
+            <p>Media: {{ subject.average }}</p>
+            <p>Voti: {{ subject.grade_count }}</p>
+            <a href="{{ url_for('view_subject', subject_id=subject.id) }}">Gestisci voti</a>
+        </div>
+        {% else %}
+        <p>Nessuna materia registrata</p>
+        {% endfor %}
+    </div>
+    
+    <form class="add-form" method="POST" action="{{ url_for('add_subject') }}">
+        <input type="text" name="name" placeholder="Nome nuova materia" required>
+        <button type="submit">Aggiungi Materia</button>
+    </form>
+</div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
