@@ -560,6 +560,67 @@ body.dark-theme .confirm-btn:hover {
             });
         });
     }
+        // Gestione eliminazione account
+const deleteAccountLink = document.getElementById('deleteAccountLink');
+const deleteAccountModal = document.getElementById('deleteAccountModal');
+const cancelDelete = document.getElementById('cancelDelete');
+const confirmDelete = document.getElementById('confirmDelete');
+
+if (deleteAccountLink) {
+    deleteAccountLink.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (dropdown) dropdown.classList.remove('show');  // Chiudi il menu se aperto
+        deleteAccountModal.style.display = 'flex';
+    });
+}
+
+if (cancelDelete) {
+    cancelDelete.addEventListener('click', function() {
+        deleteAccountModal.style.display = 'none';
+    });
+}
+
+if (confirmDelete) {
+    confirmDelete.addEventListener('click', function() {
+        // Mostra un loader durante l'operazione
+        confirmDelete.innerHTML = 'Eliminazione in corso...';
+        confirmDelete.disabled = true;
+        
+        // Invia la richiesta di eliminazione
+        fetch('/delete_account', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Reindirizza alla pagina di login dopo l'eliminazione
+                window.location.href = "{{ url_for('login') }}";
+            } else {
+                alert('Errore durante l\'eliminazione: ' + (data.message || 'Riprova più tardi'));
+                deleteAccountModal.style.display = 'none';
+                confirmDelete.innerHTML = 'Conferma eliminazione';
+                confirmDelete.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Errore:', error);
+            alert('Errore di connessione');
+            deleteAccountModal.style.display = 'none';
+            confirmDelete.innerHTML = 'Conferma eliminazione';
+            confirmDelete.disabled = false;
+        });
+    });
+}
+
+// Chiudi il modal cliccando fuori dal contenuto
+window.addEventListener('click', function(e) {
+    if (e.target === deleteAccountModal) {
+        deleteAccountModal.style.display = 'none';
+    }
+});
     </script>
 </body>
 </html>
