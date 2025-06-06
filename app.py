@@ -247,6 +247,50 @@ def change_theme():
         print(f"Errore cambio tema: {str(e)}")
         return jsonify({'success': False})
 
+# ... (dopo la route change_theme) ...
+
+@app.route('/delete_account', methods=['POST'])
+def delete_account():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'Utente non autenticato'})
+    
+    user_id = session['user_id']
+    
+    try:
+        # Elimina prima tutti i voti dell'utente
+        db.session.execute(
+            text("""
+                DELETE FROM grades
+                WHERE subject_id IN (
+                    SELECT id FROM subjects WHERE user_id = :user_id
+                )
+            """),
+            {'user_id': user_id}
+        )
+        
+        # Elimina tutte le materie dell'utente
+        db.session.execute(
+            text("DELETE FROM subjects WHERE user_id = :user_id"),
+            {'user_id': user_id}
+        )
+        
+        # Elimina l'utente
+        db.session.execute(
+            text("DELETE FROM users WHERE id = :user_id"),
+            {'user_id': user_id}
+        )
+        
+        db.session.commit()
+        
+        # Cancella la sessione
+        session.clear()
+        
+        return jsonify({'success': True})
+    
+    except Exception as e:
+        print(f"Errore eliminazione account: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)})
+
 
 
 @app.route('/logout')
