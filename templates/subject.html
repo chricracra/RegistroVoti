@@ -281,6 +281,88 @@
         body.dark-theme .chart-container canvas {
             filter: invert(90%) hue-rotate(180deg);
         }
+        /* Stili per il modal */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.7);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 16px;
+    padding: 30px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.modal h3 {
+    margin-top: 0;
+    color: #e74c3c;
+}
+
+.modal p {
+    margin: 20px 0;
+    line-height: 1.5;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.modal-btn {
+    padding: 12px 25px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 16px;
+    transition: all 0.3s;
+}
+
+.cancel-btn {
+    background: #ecf0f1;
+    color: #333;
+}
+
+.confirm-btn {
+    background: #e74c3c;
+    color: white;
+}
+
+.confirm-btn:hover {
+    background: #c0392b;
+}
+
+/* Tema scuro per il modal */
+body.dark-theme .modal-content {
+    background: #1e1e1e;
+    color: #e0e0e0;
+}
+
+body.dark-theme .cancel-btn {
+    background: #2c2c2c;
+    color: #e0e0e0;
+}
+
+body.dark-theme .confirm-btn {
+    background: #c0392b;
+}
+
+body.dark-theme .confirm-btn:hover {
+    background: #e74c3c;
+}
     </style>
 </head>
 <body class="{% if session.get('theme') == 'dark' %}dark-theme{% endif %}">
@@ -361,7 +443,22 @@
     <form method="POST" action="{{ url_for('delete_subject', subject_id=subject.id) }}">
         <button type="submit" class="delete-subject-btn">Elimina Materia</button>
     </form>
+<!-- Popup per eliminazione account -->
+<div class="modal" id="deleteAccountModal">
+    <div class="modal-content">
+        <h3>Conferma eliminazione account</h3>
+        <p>Sei sicuro di voler eliminare il tuo account? Tutti i tuoi dati verranno cancellati definitivamente.</p>
+        <div class="modal-actions">
+            <button id="cancelDelete" class="modal-btn cancel-btn">Annulla</button>
+            <button id="confirmDelete" class="modal-btn confirm-btn">Conferma eliminazione</button>
+        </div>
+    </div>
+</div>
 
+<!-- Aggiungi questa opzione nel menu a tendina -->
+<div class="dropdown-item">
+    <a href="#" id="deleteAccountLink">Elimina Account</a>
+</div>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         // Grafico di andamento
