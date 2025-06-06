@@ -284,8 +284,7 @@ def dashboard():
                 'id': subject.id,
                 'name': subject.name,
                 'average': avg,
-                'completion': min(100, len(grades) * 10),  # 10% per voto
-                'grade_count': len(grades)
+                'grade_count': len(grades)  # Manteniamo solo il conteggio voti
             })
         
         # Calcola la media generale
@@ -293,7 +292,7 @@ def dashboard():
         
         # Prepara dati per il grafico radar
         radar_labels = [s.name for s in subjects]
-        radar_data = [s['average'] for s in subjects_data]
+        radar_data = [s['average'] for s in subjects_data]  # Usiamo direttamente la media
         
         return render_template('dashboard.html',
                                subjects=subjects_data,
