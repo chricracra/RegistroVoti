@@ -11,6 +11,15 @@
         .user-info { display: flex; align-items: center; gap: 10px; }
         .welcome { font-size: 18px; font-weight: 500; }
         .username { color: #2575fc; font-weight: 600; }
+        .back-btn {
+            display: inline-block;
+            padding: 10px 15px;
+            background: #f1f8ff;
+            color: #2575fc;
+            border-radius: 8px;
+            text-decoration: none;
+            margin-bottom: 15px;
+        }
         .subject-header { background: white; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
         .subject-title { margin: 0; color: #2c3e50; }
         .subject-avg { font-size: 1.8em; font-weight: 700; color: #ff6b6b; }
@@ -264,6 +273,11 @@
             background-color: #b71c1c;
         }
         
+        body.dark-theme .back-btn {
+            background: #0d47a1;
+            color: #bbdefb;
+        }
+        
         body.dark-theme .chart-container canvas {
             filter: invert(90%) hue-rotate(180deg);
         }
@@ -297,6 +311,9 @@
             </div>
         </div>
     </header>
+    
+    <!-- Pulsante per tornare alla dashboard -->
+    <a href="{{ url_for('dashboard') }}" class="back-btn">← Torna alla Dashboard</a>
     
     <div class="subject-header">
         <h1 class="subject-title">{{ subject.name }}</h1>
