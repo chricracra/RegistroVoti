@@ -333,9 +333,16 @@ def view_subject(subject_id):
         return redirect(url_for('login'))
     
     try:
-        # Recupera la materia
+        # Recupera la materia con JOIN implicito
         subject = db.session.execute(
-            text("SELECT * FROM subjects WHERE id = :id AND user_id = :user_id"),
+            text("""
+                SELECT s.id, s.name, s.user_id, 
+                       AVG(g.value) as average 
+                FROM subjects s
+                LEFT JOIN grades g ON s.id = g.subject_id
+                WHERE s.id = :id AND s.user_id = :user_id
+                GROUP BY s.id, s.name
+            """),
             {'id': subject_id, 'user_id': session['user_id']}
         ).fetchone()
         
@@ -349,17 +356,15 @@ def view_subject(subject_id):
             {'subject_id': subject_id}
         ).fetchall()
         
-        # Calcola la media
-        average = calculate_weighted_average(grades)
-        
         # Prepara dati per il grafico
         chart_dates = [g.date.strftime('%Y-%m-%d') for g in grades] if grades else []
         chart_values = [g.value for g in grades] if grades else []
         
         return render_template('subject.html',
                                subject=subject,
-                               average=average,
+                               average=subject.average or 0,
                                grades=grades,
+                               username=session['username'],  # Aggiunto per l'header
                                chart_dates=json.dumps(chart_dates),
                                chart_values=json.dumps(chart_values))
     
