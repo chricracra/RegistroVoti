@@ -358,44 +358,35 @@ body.dark-theme .confirm-btn:hover {
 </head>
 <body class="{% if session.get('theme') == 'dark' %}dark-theme{% endif %}">
     <header>
-        <div class="logo">
-            <h1>📚 Registro Voti</h1>
-        </div>
-        <div class="user-info">
-            <div class="welcome">Ciao <span class="username">{{ username }}</span></div>
-            <div class="avatar-container">
-                <div class="avatar" id="userAvatar">
-                    {{ username[0]|upper }}
-                </div>
-                <div class="dropdown-menu" id="userDropdown">
-    <!-- Opzione tema scuro -->
-    <div class="dropdown-item">
-        <div class="theme-switch">
-            <span>Modalità Scura</span>
-            <label class="switch">
-                <input type="checkbox" id="themeToggle">
-                <span class="slider round"></span>
-            </label>
-        </div>
+    <div class="logo">
+        <h1>📚 Registro Voti</h1>
     </div>
-    
-    <!-- Opzione logout -->
-    <div class="dropdown-item">
-        <a href="{{ url_for('logout') }}">Esci dall'account</a>
-    </div>
-    
-    <!-- AGGIUNGI QUI LA NUOVA OPZIONE -->
-    <div class="dropdown-item">
-        <a href="#" id="deleteAccountLink">Elimina Account</a>
-    </div>
-</div>
-                    <div class="dropdown-item">
-                        <a href="{{ url_for('logout') }}">Esci dall'account</a>
+    <div class="user-info">
+        <div class="welcome">Ciao <span class="username">{{ username }}</span></div>
+        <div class="avatar-container">
+            <div class="avatar" id="userAvatar">
+                {{ username[0]|upper }}
+            </div>
+            <div class="dropdown-menu" id="userDropdown">
+                <div class="dropdown-item">
+                    <div class="theme-switch">
+                        <span>Modalità Scura</span>
+                        <label class="switch">
+                            <input type="checkbox" id="themeToggle">
+                            <span class="slider round"></span>
+                        </label>
                     </div>
+                </div>
+                <div class="dropdown-item">
+                    <a href="{{ url_for('logout') }}">Esci dall'account</a>
+                </div>
+                <div class="dropdown-item">
+                    <a href="#" id="deleteAccountLink">Elimina Account</a>
                 </div>
             </div>
         </div>
-    </header>
+    </div>
+</header>
 
     <div class="top-section">
         <!-- Card media generale (sinistra) -->
